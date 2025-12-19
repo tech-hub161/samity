@@ -115,7 +115,7 @@ input[type="date"], input[type="text"], input[type="number"] {
     width: 40px; /* Further reduced width for Khata input */
 }
 
-.balance, .total-outstanding {
+.balance, .interest, .total-outstanding {
     text-align: center;
     font-weight: 500;
 }

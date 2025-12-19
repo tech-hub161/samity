@@ -22,21 +22,20 @@ function addDepositListener(row) {
     const depositInput = row.cells[3].querySelector('input');
     const khataInput = row.cells[2].querySelector('input');
     const loanInput = row.cells[6].querySelector('input');
-    const loanFineInput = row.cells[7].querySelector('input');
     const parishodhInput = row.cells[8].querySelector('input');
     const updateCalculations = () => {
         const deposit = parseFloat(depositInput.value) || 0;
         const khata = parseFloat(khataInput.value) || 0;
         const loan = parseFloat(loanInput.value) || 0;
-        const loanFine = parseFloat(loanFineInput.value) || 0;
         const parishodh = parseFloat(parishodhInput.value) || 0;
+        const interest = loan * 0.01; // 1% per week
         row.cells[5].textContent = deposit * khata; // Balance
-        row.cells[9].textContent = loan - parishodh + loanFine; // Total Outstanding
+        row.cells[7].textContent = interest; // Interest
+        row.cells[9].textContent = loan - parishodh + interest; // Total Outstanding
     };
     depositInput.addEventListener('input', updateCalculations);
     khataInput.addEventListener('input', updateCalculations);
     loanInput.addEventListener('input', updateCalculations);
-    loanFineInput.addEventListener('input', updateCalculations);
     parishodhInput.addEventListener('input', updateCalculations);
     // Do not set initial to preserve carried over values
 }
@@ -78,7 +77,7 @@ function loadData(selectedDate) {
                 <td><input type="number" value="${record.depositFine}" placeholder="Deposit Fine"></td>
                 <td class="balance">${record.balance}</td>
                 <td><input type="number" value="${record.loan}" placeholder="Loan"></td>
-                <td><input type="number" value="${record.loanFine}" placeholder="Loan Fine"></td>
+                <td class="interest">${record.interest || record.loanFine || 0}</td>
                 <td><input type="number" value="${record.parishodh}" placeholder="Parishodh"></td>
                 <td class="total-outstanding">${record.totalOutstanding}</td>
             `;
@@ -91,7 +90,7 @@ function loadData(selectedDate) {
                 <td><input type="number" placeholder="Deposit Fine"></td>
                 <td class="balance">${record.balance || 0}</td>
                 <td><input type="number" placeholder="Loan"></td>
-                <td><input type="number" placeholder="Loan Fine"></td>
+                <td class="interest">0</td>
                 <td><input type="number" placeholder="Parishodh"></td>
                 <td class="total-outstanding">${record.totalOutstanding || 0}</td>
             `;
@@ -150,7 +149,7 @@ document.getElementById('add-btn').addEventListener('click', function() {
             <td><input type="number" placeholder="Deposit Fine"></td>
             <td class="balance">0</td>
             <td><input type="number" placeholder="Loan"></td>
-            <td><input type="number" placeholder="Loan Fine"></td>
+            <td class="interest">0</td>
             <td><input type="number" placeholder="Parishodh"></td>
             <td class="total-outstanding">0</td>
         `;
@@ -176,7 +175,7 @@ document.getElementById('save-btn').addEventListener('click', function() {
             depositFine: cells[4].querySelector('input').value,
             balance: cells[5].textContent,
             loan: cells[6].querySelector('input').value,
-            loanFine: cells[7].querySelector('input').value,
+            interest: cells[7].textContent,
             parishodh: cells[8].querySelector('input').value,
             totalOutstanding: cells[9].textContent
         });
