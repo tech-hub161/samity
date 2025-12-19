@@ -28,10 +28,13 @@ function addDepositListener(row) {
         const khata = parseFloat(khataInput.value) || 0;
         const loan = parseFloat(loanInput.value) || 0;
         const parishodh = parseFloat(parishodhInput.value) || 0;
-        const interest = loan * 0.01; // 1% per week
         row.cells[5].textContent = deposit * khata; // Balance
-        row.cells[7].textContent = interest; // Interest
-        row.cells[9].textContent = loan - parishodh + interest; // Total Outstanding
+        if (row.dataset.isSaved !== 'true') {
+            const previousOutstanding = parseFloat(row.dataset.previousOutstanding) || 0;
+            const interest = previousOutstanding * 0.01;
+            row.cells[7].textContent = interest;
+            row.cells[9].textContent = previousOutstanding + loan + interest - parishodh;
+        }
     };
     depositInput.addEventListener('input', updateCalculations);
     khataInput.addEventListener('input', updateCalculations);
@@ -69,6 +72,7 @@ function loadData(selectedDate) {
     data.forEach((record, index) => {
         const newRow = tbody.insertRow();
         if (isSaved) {
+            newRow.dataset.isSaved = 'true';
             newRow.innerHTML = `
                 <td>${index + 1}</td>
                 <td><input type="text" value="${record.name}" placeholder="Name"></td>
@@ -82,6 +86,7 @@ function loadData(selectedDate) {
                 <td class="total-outstanding">${record.totalOutstanding}</td>
             `;
         } else {
+            newRow.dataset.previousOutstanding = record.totalOutstanding || 0;
             newRow.innerHTML = `
                 <td>${index + 1}</td>
                 <td><input type="text" value="${record.name}" placeholder="Name"></td>
@@ -90,7 +95,7 @@ function loadData(selectedDate) {
                 <td><input type="number" placeholder="Deposit Fine"></td>
                 <td class="balance">${record.balance || 0}</td>
                 <td><input type="number" placeholder="Loan"></td>
-                <td class="interest">0</td>
+                <td class="interest">${(record.totalOutstanding || 0) * 0.01}</td>
                 <td><input type="number" placeholder="Parishodh"></td>
                 <td class="total-outstanding">${record.totalOutstanding || 0}</td>
             `;
@@ -141,6 +146,7 @@ document.getElementById('add-btn').addEventListener('click', function() {
         const tbody = document.querySelector('#customer-table tbody');
         const rowCount = tbody.rows.length + 1;
         const newRow = tbody.insertRow();
+        newRow.dataset.previousOutstanding = 0;
         newRow.innerHTML = `
             <td>${rowCount}</td>
             <td><input type="text" value="${customerName}" placeholder="Name"></td>
