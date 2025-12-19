@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Management</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Goalpara Samabay Samity</h1>
+        <div class="header-controls">
+            <input type="date" id="calendar-picker">
+            <button id="report-btn">Report</button>
+            <button id="logout-btn">Logout</button>
+        </div>
+    </header>
+    <main>
+        <div class="table-container">
+            <table id="customer-table">
+                <thead>
+                    <tr>
+                        <th>SL No</th>
+                        <th>Name</th>
+                        <th>Khata</th>
+                        <th>Deposit</th>
+                        <th>Deposit Fine</th>
+                        <th>Balance</th>
+                        <th>Loan</th>
+                        <th>Loan Fine</th>
+                        <th>Parishodh</th>
+                        <th>Total Outstanding</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Rows will be added dynamically -->
+                </tbody>
+            </table>
+        </div>
+        <div class="table-controls">
+            <button id="add-btn">Add</button>
+            <button id="save-btn">Save</button>
+        </div>
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>
