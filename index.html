@@ -3,45 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Customer Management</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>GSS - Welcome to the Samity Page</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header>
-        <h1>Goalpara Samabay Samity</h1>
+        <h1>GOALPARA SAMABAY SAMITY</h1>
         <div class="header-controls">
-            <input type="date" id="calendar-picker">
-            <button id="report-btn">Report</button>
-            <button id="logout-btn">Logout</button>
+            <div class="left-controls">
+                <p>Weeks: <span id="weeks-display">0</span></p>
+            </div>
+            <div class="right-controls">
+                <input type="date" id="date-picker">
+                <button id="report-btn">Report</button>
+                <button id="logout-btn">Logout</button>
+                <input type="search" id="search-bar" placeholder="Search Customer...">
+            </div>
         </div>
     </header>
+
     <main>
-        <div class="table-container">
-            <table id="customer-table">
-                <thead>
-                    <tr>
-                        <th>SL No</th>
-                        <th>Name</th>
-                        <th>Khata</th>
-                        <th>Deposit</th>
-                        <th>Deposit Fine</th>
-                        <th>Balance</th>
-                        <th>Loan</th>
-                        <th>Interest</th>
-                        <th>Parishodh</th>
-                        <th>Total Outstanding</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Rows will be added dynamically -->
-                </tbody>
-            </table>
-        </div>
-        <div class="table-controls">
-            <button id="add-btn">Add</button>
+        <table id="samity-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Khata</th>
+                    <th>Deposit</th>
+                    <th>LOAN</th>
+                    <th>FINE</th>
+                    <th>DUE</th>
+                    <th>INTEREST</th>
+                    <th>PARISODH</th>
+                    <th>TOTAL</th>
+                    <th>TOTAL LOAN</th>
+                    <th>ACTION</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Customer rows will be inserted here by JavaScript -->
+            </tbody>
+            <tfoot>
+                <tr id="summary-row">
+                    <td>SUMMARY</td>
+                    <td></td>
+                    <td id="total-deposit">0</td>
+                    <td id="total-loan-issued">0</td>
+                    <td id="total-fine">0</td>
+                    <td id="total-due">0</td>
+                    <td id="total-interest">0</td>
+                    <td id="total-parisodh">0</td>
+                    <td id="total-total">0</td>
+                    <td id="total-total-loan">0</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div class="table-actions">
+            <button id="add-new-btn">ADD NEW</button>
+            <button id="edit-btn">Edit</button>
             <button id="save-btn">Save</button>
         </div>
     </main>
+
     <script src="script.js"></script>
 </body>
 </html>
