@@ -21,14 +21,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const FOUR_HOURS_MS = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
     const lastDatePromptTimestamp = localStorage.getItem('lastDatePromptTimestamp');
     const now = new Date().getTime();
+    const lastSavedDate = localStorage.getItem('lastSavedDate');
+    const selectedDateFromStorage = localStorage.getItem('selectedDate');
 
     if (!lastDatePromptTimestamp || (now - parseInt(lastDatePromptTimestamp)) > FOUR_HOURS_MS) {
-        // Show modal
-        dateSelectionModal.style.display = 'flex';
+        // Show modal if it's the first time or 4 hours passed since last prompt
+        Object.assign(dateSelectionModal.style, {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+        });
         modalDatePicker.value = todayISO; // Set modal picker to today
     } else {
         // Proceed normally, ensure datePicker is set and data loaded
-        datePicker.value = localStorage.getItem('selectedDate') || todayISO; // Use stored date or today
+        // Prioritize lastSavedDate if available, otherwise use selectedDateFromStorage or today
+        datePicker.value = lastSavedDate || selectedDateFromStorage || todayISO;
+        localStorage.setItem('selectedDate', datePicker.value); // Ensure selectedDate is up-to-date
         initializeDataEntry();
     }
 
@@ -49,13 +57,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- Event Listeners ---
         addNewBtn.addEventListener('click', addNewCustomer);
         editBtn.addEventListener('click', editCustomerData);
-        saveBtn.addEventListener('click', saveData);
+        saveBtn.addEventListener('click', () => saveData(false)); // Wrap to prevent event object being passed
         reportBtn.addEventListener('click', () => {
             window.location.href = 'report/report.html';
         });
         searchBar.addEventListener('input', filterTable);
         datePicker.addEventListener('change', loadData);
         samityTableBody.addEventListener('input', handleTableInput);
+        samityTableBody.addEventListener('focusin', (event) => {
+            if (event.target.tagName === 'INPUT' && event.target.type === 'number') {
+                event.target.select();
+            }
+        });
 
         // Initial Load
         checkForEditRequest();
@@ -113,7 +126,11 @@ document.addEventListener('DOMContentLoaded', () => {
         row.dataset.loanIssueDate = data.loanIssueDate || '';
 
         row.innerHTML = `
-            <td data-field="name">${data.name}</td>
+            <td data-field="name" class="name-cell">
+                <span class="customer-name-display">${data.name}</span>
+                <input type="text" class="customer-name-edit" value="${data.name}" style="display:none;">
+                <span class="action-btn edit-name-btn" title="Edit Name">✏️</span>
+            </td>
             <td><input type="text" data-field="khata" value="${data.khata || ''}"></td>
             <td><input type="number" data-field="deposit" value="${data.deposit || 0}" min="0"></td>
             <td><input type="number" data-field="loan" value="${data.loan || 0}" min="0"></td>
@@ -130,6 +147,52 @@ document.addEventListener('DOMContentLoaded', () => {
             if (confirm(`Are you sure you want to delete ${data.name}? This is permanent.`)) {
                 e.target.closest('tr').remove();
                 updateSummary();
+                saveData(true); // Save the data silently to make the deletion permanent
+            }
+        });
+
+        // Event listener for editing customer name
+        const editNameBtn = row.querySelector('.edit-name-btn');
+        const customerNameDisplay = row.querySelector('.customer-name-display');
+        const customerNameEditInput = row.querySelector('.customer-name-edit');
+
+        editNameBtn.addEventListener('click', () => {
+            if (editNameBtn.title === 'Edit Name') {
+                customerNameDisplay.style.display = 'none';
+                customerNameEditInput.style.display = 'inline-block';
+                customerNameEditInput.focus();
+                editNameBtn.title = 'Save Name';
+            } else { // Save Name
+                const oldName = row.dataset.name;
+                const newName = customerNameEditInput.value.trim();
+
+                if (newName && newName !== oldName) {
+                    const existingNames = Array.from(samityTableBody.querySelectorAll('tr'))
+                                            .filter(r => r !== row) // Exclude current row
+                                            .map(r => r.dataset.name.toLowerCase());
+                    if (existingNames.includes(newName.toLowerCase())) {
+                        alert("A customer with this name already exists.");
+                        customerNameEditInput.value = oldName; // Revert to old name
+                        return;
+                    }
+
+                    // Update all occurrences of the name in the current view
+                    // This is crucial if name is used as an identifier for other operations
+                    row.dataset.name = newName;
+                    customerNameDisplay.textContent = newName;
+                    customerNameEditInput.value = newName;
+                    // Note: Actual saving to localStorage for all affected dates
+                    // will happen when the main 'Save' button is clicked.
+                    // This change only affects the current session's table view.
+                } else if (!newName) {
+                    alert("Customer name cannot be empty.");
+                    customerNameEditInput.value = oldName;
+                    return;
+                }
+
+                customerNameDisplay.style.display = 'inline-block';
+                customerNameEditInput.style.display = 'none';
+                editNameBtn.title = 'Edit Name';
             }
         });
 
@@ -139,6 +202,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleTableInput(event) {
         if (event.target.tagName === 'INPUT') {
             const row = event.target.closest('tr');
+            
+            // Remove highlight on input, indicating the row has been worked on.
+            row.classList.remove('highlight-row');
+
+            // Round off numeric inputs
+            if (event.target.type === 'number') {
+                event.target.value = Math.round(event.target.value);
+            }
+
             const previousData = getPreviousDayData();
             const customerName = row.dataset.name;
             const lastWeekData = previousData.find(c => c.name.toLowerCase() === customerName.toLowerCase());
@@ -213,31 +285,70 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('total-total-loan').textContent = summary.totalLoan.toFixed(2);
     }
 
-    function saveData() {
+    function saveData(silent = false) {
         const dateKey = `samity-data-${datePicker.value}`;
         const dataToSave = [];
         const rows = samityTableBody.querySelectorAll('tr');
+        const previousData = getPreviousDayData();
 
         rows.forEach(row => {
+            // Re-calculate all values at the moment of saving to ensure data integrity
+            const lastWeekData = previousData.find(c => c.name.toLowerCase() === row.dataset.name.toLowerCase());
+
+            const deposit = parseFloat(row.querySelector('[data-field="deposit"]').value) || 0;
+            const newLoan = parseFloat(row.querySelector('[data-field="loan"]').value) || 0;
+            const fine = parseFloat(row.querySelector('[data-field="fine"]').value) || 0;
+            const due = parseFloat(row.querySelector('[data-field="due"]').value) || 0;
+            const parisodh = parseFloat(row.querySelector('[data-field="parisodh"]').value) || 0;
+
+            const previousTotalLoan = lastWeekData ? lastWeekData.totalLoan : 0;
+            const loanIssueDate = row.dataset.loanIssueDate ? new Date(row.dataset.loanIssueDate) : null;
+            const currentDate = new Date(datePicker.value);
+
+            let interest = 0;
+            if (previousTotalLoan > 0 && loanIssueDate) {
+                const timeDiff = currentDate.getTime() - loanIssueDate.getTime();
+                const dayDiff = timeDiff / (1000 * 3600 * 24);
+                if (dayDiff >= 7) {
+                    interest = previousTotalLoan * 0.01;
+                }
+            }
+
+            const total = deposit + fine + due + interest + parisodh;
+            const currentTotalLoan = previousTotalLoan + newLoan - parisodh;
+
             const rowData = {
                 name: row.dataset.name,
                 khata: row.querySelector('[data-field="khata"]').value,
-                deposit: parseFloat(row.querySelector('[data-field="deposit"]').value) || 0,
-                loan: parseFloat(row.querySelector('[data-field="loan"]').value) || 0,
-                fine: parseFloat(row.querySelector('[data-field="fine"]').value) || 0,
-                due: parseFloat(row.querySelector('[data-field="due"]').value) || 0,
-                interest: parseFloat(row.querySelector('[data-field="interest"]').textContent) || 0,
-                parisodh: parseFloat(row.querySelector('[data-field="parisodh"]').value) || 0,
-                total: parseFloat(row.querySelector('[data-field="total"]').textContent) || 0,
-                totalLoan: parseFloat(row.querySelector('[data-field="totalLoan"]').textContent) || 0,
+                deposit: deposit,
+                loan: newLoan,
+                fine: fine,
+                due: due,
+                interest: interest,
+                parisodh: parisodh,
+                total: total,
+                totalLoan: currentTotalLoan,
                 loanIssueDate: row.dataset.loanIssueDate,
             };
             dataToSave.push(rowData);
         });
 
         localStorage.setItem(dateKey, JSON.stringify(dataToSave));
-        alert(`Data for ${datePicker.value} saved successfully!`);
+        localStorage.setItem('lastSavedDate', datePicker.value); // Store the last saved date
+        
+        if (!silent) {
+            alert(`Data for ${datePicker.value} saved successfully!`);
+        }
+
         updateWeeksDisplay();
+        
+        // Add saved-row class for visual feedback
+        rows.forEach(row => {
+            row.classList.add('saved-row');
+            setTimeout(() => {
+                row.classList.remove('saved-row');
+            }, 1000); // Remove class after 1 second
+        });
     }
 
     function loadData() {
@@ -247,15 +358,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
         samityTableBody.innerHTML = ''; // Clear current table
 
+        // Clear any existing saved-row or highlight-row classes before loading new data
+        samityTableBody.querySelectorAll('tr').forEach(row => {
+            row.classList.remove('saved-row', 'highlight-row');
+        });
+
         let dataToLoad = savedData;
 
         if (savedData.length === 0) {
-            // If no data for today, load previous week's customers
+            // If no data for today, load previous week's customers but reset daily fields.
             dataToLoad = previousData.map(customerData => ({
-                ...customerData,
-                deposit: 0, loan: 0, fine: 0, due: 0, parisodh: 0,
-                interest: 0, total: 0,
-                // totalLoan and loanIssueDate are carried over
+                // Explicitly define the object for a new day to prevent data leakage
+                name: customerData.name,
+                khata: customerData.khata,
+                totalLoan: customerData.totalLoan, // Carry over the running total loan
+                loanIssueDate: customerData.loanIssueDate, // Carry over for interest calculation
+                // Reset all daily transaction fields
+                deposit: 0,
+                loan: 0,
+                fine: 0,
+                due: 0,
+                parisodh: 0,
+                interest: 0,
+                total: 0,
             }));
         }
 
