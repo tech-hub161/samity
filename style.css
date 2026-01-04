@@ -139,6 +139,26 @@ main {
     padding: 15px 8px; /* More padding for summary */
 }
 
+#expense-row {
+    background-color: #f0f4f7; /* A slightly different shade for distinction */
+    font-weight: bold;
+}
+
+#expense-row input {
+    text-align: left;
+    font-weight: normal;
+}
+
+#expense-name {
+    width: 95%;
+}
+
+#expense-amount {
+    width: 90%;
+    text-align: right;
+}
+
+
 #samity-table input {
     width: calc(100% - 10px); /* Adjust width to fit padding */
     padding: 8px 5px;
@@ -334,5 +354,26 @@ main {
     box-shadow: 0 5px 20px rgba(0,0,0,0.15);
     text-align: center;
     /* Removed fixed width/height and overflow hidden */
+}
+
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto; /* 15% from the top and centered */
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%; /* Could be more or less, depending on screen size */
 }
 

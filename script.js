@@ -8,8 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const editBtn = document.getElementById('edit-btn');
     const saveBtn = document.getElementById('save-btn');
     const reportBtn = document.getElementById('report-btn');
-
-    // Modal Elements
     const dateSelectionModal = document.getElementById('date-selection-modal');
     const modalDatePicker = document.getElementById('modal-date-picker');
     const modalDateConfirmBtn = document.getElementById('modal-date-confirm-btn');
@@ -59,11 +57,35 @@ document.addEventListener('DOMContentLoaded', () => {
         editBtn.addEventListener('click', editCustomerData);
         saveBtn.addEventListener('click', () => saveData(false)); // Wrap to prevent event object being passed
         reportBtn.addEventListener('click', () => {
+            const expenseData = {
+                name: document.getElementById('expense-name').value,
+                amount: document.getElementById('expense-amount').value,
+                outstanding: document.getElementById('outstanding-amount').textContent
+            };
+            localStorage.setItem('temp-expense-data', JSON.stringify(expenseData));
+
+            const summaryData = {
+                totalKhata: document.getElementById('total-khata').textContent,
+                totalDeposit: document.getElementById('total-deposit').textContent,
+                totalLoanIssued: document.getElementById('total-loan-issued').textContent,
+                totalFine: document.getElementById('total-fine').textContent,
+                totalDue: document.getElementById('total-due').textContent,
+                totalInterest: document.getElementById('total-interest').textContent,
+                totalParisodh: document.getElementById('total-parisodh').textContent,
+                totalTotal: document.getElementById('total-total').textContent,
+                totalTotalLoan: document.getElementById('total-total-loan').textContent
+            };
+            localStorage.setItem('temp-summary-data', JSON.stringify(summaryData));
+
             window.location.href = 'report/report.html';
         });
         searchBar.addEventListener('input', filterTable);
         datePicker.addEventListener('change', loadData);
         samityTableBody.addEventListener('input', handleTableInput);
+        document.getElementById('expense-amount').addEventListener('input', updateOutstanding);
+        document.getElementById('backup-btn').addEventListener('click', backupData);
+        document.getElementById('restore-btn').addEventListener('click', restoreData);
+        document.getElementById('clear-data-btn').addEventListener('click', clearAllData);
         samityTableBody.addEventListener('focusin', (event) => {
             if (event.target.tagName === 'INPUT' && event.target.type === 'number') {
                 event.target.select();
@@ -215,9 +237,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const customerName = row.dataset.name;
             const lastWeekData = previousData.find(c => c.name.toLowerCase() === customerName.toLowerCase());
             
-            // If a new loan is entered, store today's date
             const newLoanInput = row.querySelector('[data-field="loan"]');
-            if(event.target === newLoanInput && parseFloat(newLoanInput.value) > 0) {
+            if(event.target === newLoanInput && parseFloat(newLoanInput.value) > 0 && !row.dataset.loanIssueDate) {
                 row.dataset.loanIssueDate = datePicker.value;
             }
 
@@ -258,12 +279,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateSummary() {
         const allRows = samityTableBody.querySelectorAll('tr');
         const summary = {
-            deposit: 0, loan: 0, fine: 0, due: 0,
+            khata: 0, deposit: 0, loan: 0, fine: 0, due: 0,
             interest: 0, parisodh: 0, total: 0, totalLoan: 0
         };
 
         allRows.forEach(row => {
             if (row.style.display !== 'none') { // Only include visible rows in summary
+                summary.khata += parseFloat(row.querySelector('[data-field="khata"]').value) || 0;
                 summary.deposit += parseFloat(row.querySelector('[data-field="deposit"]').value) || 0;
                 summary.loan += parseFloat(row.querySelector('[data-field="loan"]').value) || 0;
                 summary.fine += parseFloat(row.querySelector('[data-field="fine"]').value) || 0;
@@ -275,6 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        document.getElementById('total-khata').textContent = summary.khata.toFixed(0);
         document.getElementById('total-deposit').textContent = summary.deposit.toFixed(2);
         document.getElementById('total-loan-issued').textContent = summary.loan.toFixed(2);
         document.getElementById('total-fine').textContent = summary.fine.toFixed(2);
@@ -283,6 +306,15 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('total-parisodh').textContent = summary.parisodh.toFixed(2);
         document.getElementById('total-total').textContent = summary.total.toFixed(2);
         document.getElementById('total-total-loan').textContent = summary.totalLoan.toFixed(2);
+
+        updateOutstanding();
+    }
+
+    function updateOutstanding() {
+        const totalTotal = parseFloat(document.getElementById('total-total').textContent) || 0;
+        const expenseAmount = parseFloat(document.getElementById('expense-amount').value) || 0;
+        const outstandingAmount = totalTotal - expenseAmount;
+        document.getElementById('outstanding-amount').textContent = outstandingAmount.toFixed(2);
     }
 
     function saveData(silent = false) {
@@ -459,5 +491,91 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateWeeksDisplay() {
         const allKeys = Object.keys(localStorage).filter(k => k.startsWith('samity-data-'));
         weeksDisplay.textContent = allKeys.length;
+    }
+
+    function backupData() {
+        const backupData = {};
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.startsWith('samity-data-')) {
+                backupData[key] = localStorage.getItem(key);
+            }
+        }
+
+        const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'samity-backup.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        alert('Backup created successfully!');
+    }
+
+    function restoreData() {
+        if (!confirm('Are you sure you want to restore data? This will overwrite all current data.')) {
+            return;
+        }
+
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.json';
+        fileInput.onchange = (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const restoredData = JSON.parse(e.target.result);
+                        
+                        // Clear existing data
+                        const keysToRemove = [];
+                        for (let i = 0; i < localStorage.length; i++) {
+                            const key = localStorage.key(i);
+                            if (key.startsWith('samity-data-')) {
+                                keysToRemove.push(key);
+                            }
+                        }
+                        keysToRemove.forEach(key => localStorage.removeItem(key));
+
+                        // Restore new data
+                        for (const key in restoredData) {
+                            if (key.startsWith('samity-data-')) {
+                                localStorage.setItem(key, restoredData[key]);
+                            }
+                        }
+                        alert('Data restored successfully! The page will now reload.');
+                        location.reload();
+                    } catch (error) {
+                        alert('Error reading or parsing backup file. Please ensure it is a valid backup file.');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        };
+        fileInput.click();
+    }
+
+    function clearAllData() {
+        if (!confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+            return;
+        }
+        if (!confirm('FINAL WARNING: This will delete everything. Are you absolutely sure?')) {
+            return;
+        }
+
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.startsWith('samity-data-')) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        
+        alert('All data has been cleared. The page will now reload.');
+        location.reload();
     }
 });

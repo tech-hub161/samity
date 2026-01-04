@@ -16,6 +16,9 @@
             <div class="right-controls">
                 <input type="date" id="date-picker">
                 <button id="report-btn">Report</button>
+                <button id="backup-btn">Backup</button>
+                <button id="restore-btn">Restore</button>
+                <button id="clear-data-btn" class="btn-danger">Clear Data</button>
                 <button id="logout-btn">Logout</button>
                 <input type="search" id="search-bar" placeholder="Search Customer...">
             </div>
@@ -45,7 +48,7 @@
             <tfoot>
                 <tr id="summary-row">
                     <td>SUMMARY</td>
-                    <td></td>
+                    <td id="total-khata">0</td>
                     <td id="total-deposit">0</td>
                     <td id="total-loan-issued">0</td>
                     <td id="total-fine">0</td>
@@ -55,6 +58,14 @@
                     <td id="total-total">0</td>
                     <td id="total-total-loan">0</td>
                     <td></td>
+                </tr>
+                <tr id="expense-row">
+                    <td>Expense</td>
+                    <td colspan="1"><input type="text" id="expense-name" placeholder="Expense Name"></td>
+                    <td><input type="number" id="expense-amount" min="0" value="0"></td>
+                    <td colspan="5"></td>
+                    <td id="outstanding-amount">0</td>
+                    <td colspan="2"></td>
                 </tr>
             </tfoot>
         </table>
@@ -71,8 +82,7 @@
     <!-- Date Selection Modal -->
     <div id="date-selection-modal" class="modal">
         <div class="modal-content">
-            <h2>Confirm Date</h2>
-            <p>Please select today's date to proceed with data entry.</p>
+            <h2>Select Working Date</h2>
             <input type="date" id="modal-date-picker">
             <button id="modal-date-confirm-btn">Confirm</button>
         </div>
