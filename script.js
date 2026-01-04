@@ -11,6 +11,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const dateSelectionModal = document.getElementById('date-selection-modal');
     const modalDatePicker = document.getElementById('modal-date-picker');
     const modalDateConfirmBtn = document.getElementById('modal-date-confirm-btn');
+    const saveAnimationModal = document.getElementById('save-animation-modal');
+    const paperPlane = document.querySelector('.paper-plane');
+    const clouds = document.querySelectorAll('.cloud');
+    const successAnimation = document.querySelector('.success-animation');
+    const checkmarkCircle = document.querySelector('.checkmark__circle');
+    const checkmarkCheck = document.querySelector('.checkmark__check');
 
     const today = new Date();
     const todayISO = today.toISOString().split('T')[0];
@@ -369,7 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('lastSavedDate', datePicker.value); // Store the last saved date
         
         if (!silent) {
-            alert(`Data for ${datePicker.value} saved successfully!`);
+            playSaveAnimation();
         }
 
         updateWeeksDisplay();
@@ -380,6 +386,81 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 row.classList.remove('saved-row');
             }, 1000); // Remove class after 1 second
+        });
+    }
+
+    function playSaveAnimation() {
+        if (typeof gsap === 'undefined') {
+            alert('GSAP not loaded');
+            return;
+        }
+        saveAnimationModal.style.display = 'flex';
+
+        clouds.forEach(cloud => {
+            gsap.set(cloud, {
+                y: Math.random() * 150 - 50, // Random y between -50 and 100
+                scale: Math.random() * 0.8 + 0.4 // Random scale between 0.4 and 1.2
+            });
+        });
+
+        const tl = gsap.timeline();
+
+        tl.to(paperPlane, {
+            duration: 3,
+            x: 350,
+            ease: 'power1.inOut',
+        })
+        .to(paperPlane, {
+            duration: 0.2,
+            rotation: 10,
+            yoyo: true,
+            repeat: 15,
+            ease: 'power1.inOut'
+        }, 0)
+        .to(paperPlane, {
+            opacity: 0,
+            duration: 0.5
+        }, '-=0.5')
+        .to(clouds, {
+            x: 400,
+            duration: 4,
+            ease: 'linear',
+            stagger: 0.2,
+            opacity: 0
+        }, 0)
+        .to(successAnimation, {
+            opacity: 1,
+            visibility: 'visible',
+            duration: 0.5
+        })
+        .fromTo(checkmarkCircle, {
+            strokeDashoffset: 166
+        }, {
+            strokeDashoffset: 0,
+            duration: 1,
+            ease: 'power1.in'
+        })
+        .fromTo(checkmarkCheck, {
+            strokeDashoffset: 48
+        }, {
+            strokeDashoffset: 0,
+            duration: 0.8,
+            ease: 'power1.in'
+        }, '-=0.5')
+        .to(saveAnimationModal, {
+            opacity: 0,
+            duration: 0.5,
+            delay: 1,
+            onComplete: () => {
+                saveAnimationModal.style.display = 'none';
+                saveAnimationModal.style.opacity = 1; // Reset for next time
+                // Reset animation states
+                gsap.set(paperPlane, { x: 0, y: 0, opacity: 1, rotation: 0 });
+                gsap.set(clouds, { x: 0, opacity: 1 });
+                gsap.set(successAnimation, { opacity: 0, visibility: 'hidden' });
+                gsap.set(checkmarkCircle, { strokeDashoffset: 166 });
+                gsap.set(checkmarkCheck, { strokeDashoffset: 48 });
+            }
         });
     }
 
