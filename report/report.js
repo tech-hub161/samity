@@ -118,7 +118,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${r.parisodh.toFixed(2)}</td><td>${r.total.toFixed(2)}</td><td>${isSummary ? '-' : r.totalLoan.toFixed(2)}</td>
             </tr>`;
         });
-        tableHtml += '</tbody></table></div>';
+        if (isSummary) {
+            const totalKhata = records.reduce((acc, r) => acc + (parseFloat(r.khata) || 0), 0);
+            const totalDeposit = records.reduce((acc, r) => acc + r.deposit, 0);
+            const totalLoan = records.reduce((acc, r) => acc + r.loan, 0);
+            const totalFine = records.reduce((acc, r) => acc + r.fine, 0);
+            const totalDue = records.reduce((acc, r) => acc + r.due, 0);
+            const totalInterest = records.reduce((acc, r) => acc + r.interest, 0);
+            const totalParisodh = records.reduce((acc, r) => acc + r.parisodh, 0);
+            const totalTotal = records.reduce((acc, r) => acc + r.total, 0);
+            tableHtml += `</tbody><tfoot><tr>
+                <td><strong>SUMMARY</strong></td>
+                <td><strong>${totalKhata.toFixed(0)}</strong></td>
+                <td><strong>${totalDeposit.toFixed(2)}</strong></td>
+                <td><strong>${totalLoan.toFixed(2)}</strong></td>
+                <td><strong>${totalFine.toFixed(2)}</strong></td>
+                <td><strong>${totalDue.toFixed(2)}</strong></td>
+                <td><strong>${totalInterest.toFixed(2)}</strong></td>
+                <td><strong>${totalParisodh.toFixed(2)}</strong></td>
+                <td><strong>${totalTotal.toFixed(2)}</strong></td>
+                <td></td>
+            </tr></tfoot>`;
+        } else {
+            tableHtml += '</tbody>';
+        }
+        tableHtml += '</table></div>';
         return tableHtml;
     };
 
@@ -140,9 +164,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         recordsToSummarize.forEach(record => {
             if (!customerSummary[record.name]) {
-                customerSummary[record.name] = { name: record.name, khata: record.khata, deposit: 0, loan: 0, fine: 0, due: 0, interest: 0, parisodh: 0, total: 0 };
+                customerSummary[record.name] = { name: record.name, khata: 0, deposit: 0, loan: 0, fine: 0, due: 0, interest: 0, parisodh: 0, total: 0 };
             }
             const summary = customerSummary[record.name];
+            summary.khata += parseFloat(record.khata) || 0;
             summary.deposit += record.deposit;
             summary.loan += record.loan;
             summary.fine += record.fine;
@@ -224,12 +249,77 @@ document.addEventListener('DOMContentLoaded', () => {
         const weekData = allData[year][month][week];
         const dates = Object.keys(weekData).filter(k => k !== '_records').sort();
         
-        let tableHtml = '';
+        const allRecords = [];
         dates.forEach(date => {
-            const dayRecords = weekData[date].records;
-            tableHtml += `<h4>${date}</h4>`;
-            tableHtml += createTable(dayRecords);
+            allRecords.push(...weekData[date].records);
         });
+
+        let tableHtml = '<div class="table-responsive"><table class="table table-striped table-bordered customer-table"><thead><tr><th>Name</th><th>Khata</th><th>Deposit</th><th>LOAN</th><th>FINE</th><th>DUE</th><th>INTEREST</th><th>PARISODH</th><th>TOTAL</th><th>TOTAL LOAN</th></tr></thead><tbody>';
+        
+        dates.forEach(date => {
+            tableHtml += `<tr><td colspan="10" class="text-center bg-light"><strong>Date: ${date}</strong></td></tr>`;
+            const dayRecords = weekData[date].records;
+            dayRecords.forEach(r => {
+                tableHtml += `<tr>
+                    <td>${r.name}</td>
+                    <td>${r.khata || ''}</td>
+                    <td>${r.deposit.toFixed(2)}</td>
+                    <td>${r.loan.toFixed(2)}</td>
+                    <td>${r.fine.toFixed(2)}</td>
+                    <td>${r.due.toFixed(2)}</td>
+                    <td>${r.interest.toFixed(2)}</td>
+                    <td>${r.parisodh.toFixed(2)}</td>
+                    <td>${r.total.toFixed(2)}</td>
+                    <td>${r.totalLoan.toFixed(2)}</td>
+                </tr>`;
+            });
+        });
+
+        tableHtml += '</tbody>';
+        
+        const totalKhata = allRecords.reduce((acc, r) => acc + (parseFloat(r.khata) || 0), 0);
+        const totalDeposit = allRecords.reduce((acc, r) => acc + r.deposit, 0);
+        const totalLoan = allRecords.reduce((acc, r) => acc + r.loan, 0);
+        const totalFine = allRecords.reduce((acc, r) => acc + r.fine, 0);
+        const totalDue = allRecords.reduce((acc, r) => acc + r.due, 0);
+        const totalInterest = allRecords.reduce((acc, r) => acc + r.interest, 0);
+        const totalParisodh = allRecords.reduce((acc, r) => acc + r.parisodh, 0);
+        const totalTotal = totalDeposit + totalFine + totalDue + totalInterest + totalParisodh;
+        const totalTotalLoan = allRecords.reduce((acc, r) => acc + r.totalLoan, 0);
+
+        tableHtml += `<tfoot>
+            <tr>
+                <td><strong>SUMMARY</strong></td>
+                <td><strong>${totalKhata.toFixed(0)}</strong></td>
+                <td><strong>${totalDeposit.toFixed(2)}</strong></td>
+                <td><strong>${totalLoan.toFixed(2)}</strong></td>
+                <td><strong>${totalFine.toFixed(2)}</strong></td>
+                <td><strong>${totalDue.toFixed(2)}</strong></td>
+                <td><strong>${totalInterest.toFixed(2)}</strong></td>
+                <td><strong>${totalParisodh.toFixed(2)}</strong></td>
+                <td><strong>${totalTotal.toFixed(2)}</strong></td>
+                <td><strong>${totalTotalLoan.toFixed(2)}</strong></td>
+            </tr>`;
+
+        const expenseDataString = localStorage.getItem('temp-expense-data');
+        if (expenseDataString) {
+            const expenseData = JSON.parse(expenseDataString);
+            if (expenseData && (expenseData.name || expenseData.amount > 0)) {
+                const outstanding = totalTotal - expenseData.amount;
+                tableHtml += `
+                    <tr>
+                        <td><strong>Expense</strong></td>
+                        <td>${expenseData.name || ''}</td>
+                        <td>${expenseData.amount || 0}</td>
+                        <td></td><td></td><td></td><td></td><td></td>
+                        <td>${outstanding.toFixed(2)}</td>
+                        <td></td>
+                    </tr>
+                `;
+            }
+        }
+        
+        tableHtml += '</tfoot></table></div>';
 
         weekTableContainer.innerHTML = tableHtml;
         
@@ -263,29 +353,17 @@ document.addEventListener('DOMContentLoaded', () => {
             // Customer Summary
             const summaryBody = yearlySummary.map(r => [r.name, r.khata || '', r.deposit, r.loan, r.fine, r.due, r.interest, r.parisodh, r.total, '-']);
             
-            // Define colors for the summary table
-            const colors = [
-                [0, 0, 0],    // Black
-                [0, 0, 200],  // Blue
-                [200, 0, 0],  // Red
-                [0, 150, 0],  // Green
-                [150, 0, 150] // Purple
-            ];
-
-            // Define header styles for the summary table
-            const summaryHeadStyles = {
-                fillColor: [100, 100, 100], // Grey background
-                textColor: [255, 255, 255],   // White text
-                lineColor: [0, 0, 0],
-                lineWidth: 0.1
-            };
-
             doc.text('Customer Summary', 14, 25);
             doc.autoTable({
                 head,
                 body: summaryBody,
                 startY: 30,
-                headStyles: summaryHeadStyles,
+                headStyles: {
+                    fillColor: [100, 100, 100], // Grey background
+                    textColor: [255, 255, 255],   // White text
+                    lineColor: [0, 0, 0],
+                    lineWidth: 0.1
+                },
                 bodyStyles: {
                     fontStyle: 'bold',
                     lineColor: [0, 0, 0],
@@ -294,29 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alternateRowStyles: {
                     fillColor: [240, 240, 240]
                 },
-                didParseCell: function(data) {
-                    if (data.section === 'body') {
-                        data.cell.styles.textColor = colors[data.row.index % colors.length];
-                    }
-                }
             });
-
-            // Define colors for the weekly tables
-            const weeklyColors = [
-                [0, 100, 0],   // Dark Green
-                [100, 0, 0],   // Dark Red
-                [0, 0, 100],   // Dark Blue
-                [100, 100, 0], // Dark Yellow
-                [100, 0, 100]  // Dark Magenta
-            ];
-            
-            // Define header styles for the weekly tables
-            const weeklyHeadStyles = {
-                fillColor: [50, 50, 150], // Darker Blue background
-                textColor: [255, 255, 255],   // White text
-                lineColor: [0, 0, 0],
-                lineWidth: 0.1
-            };
 
             // Weekly data
             const weeks = Object.keys(monthData).filter(k => k !== '_records').sort();
@@ -341,7 +397,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         head,
                         body: weeklyBody,
                         startY: lastY,
-                        headStyles: weeklyHeadStyles,
+                        headStyles: {
+                            fillColor: [50, 50, 150], // Darker Blue background
+                            textColor: [255, 255, 255],   // White text
+                            lineColor: [0, 0, 0],
+                            lineWidth: 0.1
+                        },
                         bodyStyles: {
                             fontStyle: 'bold',
                             lineColor: [0, 0, 0],
@@ -350,11 +411,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         alternateRowStyles: {
                             fillColor: [240, 240, 240]
                         },
-                        didParseCell: function(data) {
-                            if (data.section === 'body') {
-                                data.cell.styles.textColor = weeklyColors[data.row.index % weeklyColors.length];
-                            }
-                        }
                     });
 
                     lastY = doc.lastAutoTable.finalY + 10; // Update lastY to the end of the table
@@ -372,6 +428,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
             doc.autoTable({ head, body, startY: 25 });
+        }
+        
+        const summaryDataString = localStorage.getItem('temp-summary-data');
+        if (summaryDataString) {
+            const summaryData = JSON.parse(summaryDataString);
+            const summaryHead = [['', 'Total Khata', 'Total Deposit', 'Total LOAN', 'Total FINE', 'Total DUE', 'Total INTEREST', 'Total PARISODH', 'Total TOTAL', 'Total Total LOAN']];
+            const summaryBody = [['', summaryData.totalKhata, summaryData.totalDeposit, summaryData.totalLoanIssued, summaryData.totalFine, summaryData.totalDue, summaryData.totalInterest, summaryData.totalParisodh, summaryData.totalTotal, summaryData.totalTotalLoan]];
+            doc.autoTable({
+                head: summaryHead,
+                body: summaryBody,
+                startY: doc.lastAutoTable.finalY + 5,
+                theme: 'grid'
+            });
+            localStorage.removeItem('temp-summary-data');
+        }
+
+        const expenseDataString = localStorage.getItem('temp-expense-data');
+        if (expenseDataString) {
+            const expenseData = JSON.parse(expenseDataString);
+            if (expenseData && (expenseData.name || expenseData.amount > 0)) {
+                const expenseHead = [['Expense Name', 'Amount', 'Outstanding']];
+                const expenseBody = [[expenseData.name, expenseData.amount, expenseData.outstanding]];
+                doc.autoTable({
+                    head: expenseHead,
+                    body: expenseBody,
+                    startY: doc.lastAutoTable.finalY + 5,
+                });
+            }
+            localStorage.removeItem('temp-expense-data');
         }
         
         doc.save(`${filename}.pdf`);
@@ -437,9 +522,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const customerSummary = {};
         filteredRecords.forEach(record => {
             if (!customerSummary[record.name]) {
-                customerSummary[record.name] = { name: record.name, khata: record.khata, deposit: 0, loan: 0, fine: 0, due: 0, interest: 0, parisodh: 0, total: 0 };
+                customerSummary[record.name] = { name: record.name, khata: 0, deposit: 0, loan: 0, fine: 0, due: 0, interest: 0, parisodh: 0, total: 0 };
             }
             const summary = customerSummary[record.name];
+            summary.khata += parseFloat(record.khata) || 0;
             summary.deposit += record.deposit;
             summary.loan += record.loan;
             summary.fine += record.fine;
@@ -449,6 +535,15 @@ document.addEventListener('DOMContentLoaded', () => {
             summary.total += record.total;
         });
         const summaryBody = Object.values(customerSummary).map(r => [r.name, r.khata || '', r.deposit, r.loan, r.fine, r.due, r.interest, r.parisodh, r.total, '-']);
+        const totalKhata = Object.values(customerSummary).reduce((acc, r) => acc + (parseFloat(r.khata) || 0), 0);
+        const totalDeposit = Object.values(customerSummary).reduce((acc, r) => acc + r.deposit, 0);
+        const totalLoan = Object.values(customerSummary).reduce((acc, r) => acc + r.loan, 0);
+        const totalFine = Object.values(customerSummary).reduce((acc, r) => acc + r.fine, 0);
+        const totalDue = Object.values(customerSummary).reduce((acc, r) => acc + r.due, 0);
+        const totalInterest = Object.values(customerSummary).reduce((acc, r) => acc + r.interest, 0);
+        const totalParisodh = Object.values(customerSummary).reduce((acc, r) => acc + r.parisodh, 0);
+        const totalTotal = Object.values(customerSummary).reduce((acc, r) => acc + r.total, 0);
+        summaryBody.push(['', totalKhata.toFixed(0), totalDeposit.toFixed(2), totalLoan.toFixed(2), totalFine.toFixed(2), totalDue.toFixed(2), totalInterest.toFixed(2), totalParisodh.toFixed(2), totalTotal.toFixed(2), '']);
         
         doc.text('Customer Summary', 14, 25);
         doc.autoTable({
@@ -595,8 +690,9 @@ document.addEventListener('DOMContentLoaded', () => {
         doc.setFont(undefined, 'normal');
 
         // Customer Summary
-        const customerSummary = { name: customerName, khata: filteredRecords[0].khata, deposit: 0, loan: 0, fine: 0, due: 0, interest: 0, parisodh: 0, total: 0 };
+        const customerSummary = { name: customerName, khata: 0, deposit: 0, loan: 0, fine: 0, due: 0, interest: 0, parisodh: 0, total: 0 };
         filteredRecords.forEach(record => {
+            customerSummary.khata += parseFloat(record.khata) || 0;
             customerSummary.deposit += record.deposit;
             customerSummary.loan += record.loan;
             customerSummary.fine += record.fine;
@@ -605,11 +701,11 @@ document.addEventListener('DOMContentLoaded', () => {
             customerSummary.parisodh += record.parisodh;
             customerSummary.total += record.total;
         });
-        const summaryBody = [[customerSummary.name, customerSummary.khata || '', customerSummary.deposit, customerSummary.loan, customerSummary.fine, customerSummary.due, customerSummary.interest, customerSummary.parisodh, customerSummary.total, '-']];
+        const summaryBody = [[customerSummary.name, customerSummary.khata.toFixed(0), customerSummary.deposit, customerSummary.loan, customerSummary.fine, customerSummary.due, customerSummary.interest, customerSummary.parisodh, customerSummary.total, '-']];
         
         doc.text('Customer Summary', 14, 25);
         doc.autoTable({
-            head: [['Name', 'Khata', 'Total Deposit', 'Total LOAN', 'Total FINE', 'Total DUE', 'Total INTEREST', 'Total PARISODH', 'Total TOTAL', '']],
+            head: [['Name', 'Total Khata', 'Total Deposit', 'Total LOAN', 'Total FINE', 'Total DUE', 'Total INTEREST', 'Total PARISODH', 'Total TOTAL', '']],
             body: summaryBody,
             startY: 30
         });
