@@ -1,66 +1,72 @@
-#record-tree ul {
-    list-style-type: none;
-    padding-left: 1.5rem;
+/* Custom Report Styles - Desktop Focused */
+
+body {
+    min-width: 1200px; /* Force desktop width */
+    overflow-x: auto;
 }
 
-#record-tree .tree-toggler {
+/* Hover effect for tree items */
+.hover-bg-light:hover {
+    background-color: #e9ecef;
     cursor: pointer;
-    user-select: none;
 }
 
-#record-tree .tree-toggler::before {
-    content: '▶ ';
-    display: inline-block;
-    transition: transform 0.2s;
-}
-
-#record-tree .tree-toggler.open::before {
-    transform: rotate(90deg);
-}
-
+/* Tree Animation */
 .nested {
-    display: none;
+    overflow: hidden;
 }
 
-.nested.visible {
-    display: block;
+/* Card Hover Lift Effect */
+.hover-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.period-link {
-    cursor: pointer;
-    color: var(--bs-blue);
-    text-decoration: underline;
-}
-
-.week-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 1rem;
-}
-
-.week-card {
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 0.25rem;
-    padding: 1rem;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-}
-
-.week-card:hover {
+.hover-lift:hover {
     transform: translateY(-5px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+    cursor: pointer;
 }
 
-.week-card h4 {
-    margin-top: 0;
+/* Custom Scrollbar for Tree Container */
+.tree-container::-webkit-scrollbar {
+    width: 8px; /* Slightly wider for mouse use */
 }
 
-.customer-table {
-    width: 100%;
-    margin-bottom: 1rem;
+.tree-container::-webkit-scrollbar-track {
+    background: #f1f1f1; 
 }
-.modal-xl {
-    max-width: 95%;
-    width: 95%;
+
+.tree-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1; 
+    border-radius: 4px;
+}
+
+.tree-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8; 
+}
+
+/* Table Enhancements */
+.customer-table th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
+    background-color: #f8f9fa; /* Ensure header bg is solid */
+}
+
+.customer-table td {
+    font-size: 1rem;
+}
+
+/* Sticky Header for Report Tables */
+.table-responsive {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1);
 }
