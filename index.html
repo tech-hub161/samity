@@ -3,107 +3,301 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GSS - Welcome to the Samity Page</title>
+    <title>GSS - Modern Dashboard</title>
+    
+    <!-- Huge Libraries -->
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f4f6f9;
+        }
+        .dashboard-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            border-radius: 0 0 20px 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .stat-card {
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: none;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .table-responsive {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+            padding: 1rem;
+        }
+        .table thead th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            color: #495057;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+        .btn-custom {
+            border-radius: 50px;
+            padding: 0.5rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .floating-action-menu {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 100;
+        }
+        .input-group-text {
+            background-color: #fff;
+            border-right: none;
+        }
+        .form-control:focus {
+            box-shadow: none;
+            border-color: #ced4da;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555; 
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <h1>GOALPARA SAMABAY SAMITY</h1>
-        <div class="header-controls">
-            <div class="left-controls">
-                <p>Weeks: <span id="weeks-display">0</span></p>
-            </div>
-            <div class="right-controls">
-                <input type="date" id="date-picker">
-                <button id="report-btn">Report</button>
-                <button id="backup-btn">Backup</button>
-                <button id="restore-btn">Restore</button>
-                <button id="clear-data-btn" class="btn-danger">Clear Data</button>
-                <button id="logout-btn">Logout</button>
-                <input type="search" id="search-bar" placeholder="Search Customer...">
+
+    <!-- Dashboard Header -->
+    <header class="dashboard-header animate__animated animate__fadeInDown">
+        <canvas id="header-3d-canvas"></canvas>
+        <div class="container-fluid px-4 position-relative" style="z-index: 1;">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <div>
+                    <h1 class="fw-bold mb-0"><i class="fas fa-landmark me-2"></i>GOALPARA SAMABAY SAMITY</h1>
+                    <p class="mb-0 opacity-75">Advanced Data Management System</p>
+                </div>
+                <div class="d-flex align-items-center gap-3 mt-3 mt-md-0">
+                    <div class="bg-white bg-opacity-25 p-2 rounded text-center">
+                        <small class="d-block text-uppercase" style="font-size: 0.7rem;">Weeks</small>
+                        <span id="weeks-display" class="fw-bold fs-5">0</span>
+                    </div>
+                    <div class="user-profile dropdown">
+                        <button class="btn btn-light rounded-circle p-2" id="logout-btn" title="Logout">
+                            <i class="fas fa-power-off text-danger"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </header>
 
-    <main>
-        <table id="samity-table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Khata</th>
-                    <th>Deposit</th>
-                    <th>LOAN</th>
-                    <th>FINE</th>
-                    <th>DUE</th>
-                    <th>INTEREST</th>
-                    <th>PARISODH</th>
-                    <th>TOTAL</th>
-                    <th>TOTAL LOAN</th>
-                    <th>ACTION</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Customer rows will be inserted here by JavaScript -->
-            </tbody>
-            <tfoot>
-                <tr id="summary-row">
-                    <td>SUMMARY</td>
-                    <td id="total-khata">0</td>
-                    <td id="total-deposit">0</td>
-                    <td id="total-loan-issued">0</td>
-                    <td id="total-fine">0</td>
-                    <td id="total-due">0</td>
-                    <td id="total-interest">0</td>
-                    <td id="total-parisodh">0</td>
-                    <td id="total-total">0</td>
-                    <td id="total-total-loan">0</td>
-                    <td></td>
-                </tr>
-                <tr id="expense-row">
-                    <td>Expense</td>
-                    <td colspan="1"><input type="text" id="expense-name" placeholder="Expense Name"></td>
-                    <td><input type="number" id="expense-amount" min="0" value="0"></td>
-                    <td colspan="5"></td>
-                    <td id="outstanding-amount">0</td>
-                    <td colspan="2"></td>
-                </tr>
-            </tfoot>
-        </table>
-
-        <div class="table-actions">
-            <button id="add-new-btn">ADD NEW</button>
-            <button id="edit-btn">Edit</button>
-            <button id="save-btn">Save</button>
-        </div>
-    </main>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js"></script>
-    <script src="script.js"></script>
-
-    <!-- Date Selection Modal -->
-    <div id="date-selection-modal" class="modal">
-        <div class="modal-content">
-            <h2>Select Working Date</h2>
-            <input type="date" id="modal-date-picker">
-            <button id="modal-date-confirm-btn">Confirm</button>
+    <div class="container-fluid px-4 mb-5">
+        <!-- Control Bar -->
+        <div class="row g-3 mb-4 animate__animated animate__fadeInUp">
+            <div class="col-4">
+                <div class="input-group shadow-sm rounded-pill overflow-hidden bg-white">
+                    <span class="input-group-text border-0"><i class="fas fa-search text-muted"></i></span>
+                    <input type="search" id="search-bar" class="form-control border-0" placeholder="Search Customer...">
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="input-group shadow-sm rounded-pill overflow-hidden bg-white">
+                    <span class="input-group-text border-0"><i class="fas fa-calendar-alt text-muted"></i></span>
+                    <input type="date" id="date-picker" class="form-control border-0">
+                </div>
+            </div>
+            <div class="col-5 d-flex justify-content-end gap-2">
+                <button id="report-btn" class="btn btn-outline-primary btn-custom shadow-sm"><i class="fas fa-file-invoice me-1"></i> Report</button>
+                <button id="backup-btn" class="btn btn-outline-secondary btn-custom shadow-sm"><i class="fas fa-cloud-download-alt me-1"></i> Backup</button>
+                <div class="dropdown">
+                    <button class="btn btn-outline-dark btn-custom shadow-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        More
+                    </button>
+                    <ul class="dropdown-menu shadow">
+                        <li><a class="dropdown-item" href="#" id="restore-btn"><i class="fas fa-history me-2"></i>Restore Data</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="#" id="clear-data-btn"><i class="fas fa-trash-alt me-2"></i>Clear Data</a></li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Save Animation Modal -->
-    <div id="save-animation-modal" class="animation-modal">
-        <div class="animation-content">
-            <div class="clouds">
-                <img src="icon/clouds 1.png" class="cloud cloud1" alt="cloud">
-                <img src="icon/clouds 2.jpg" class="cloud cloud2" alt="cloud">
-                <img src="icon/clouds 3.png" class="cloud cloud3" alt="cloud">
+    <!-- Main Data Table -->
+        <div class="card border-0 shadow-lg animate__animated animate__fadeInUp" style="animation-delay: 0.2s;">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold text-primary"><i class="fas fa-list-ul me-2"></i>Daily Transaction Record</h5>
+                <div class="d-flex align-items-center bg-light px-4 py-2 rounded-pill shadow-sm border">
+                    <span class="text-muted small fw-bold text-uppercase me-2"><i class="fas fa-wallet me-1 text-primary"></i> Current Balance:</span>
+                    <span id="header-balance-display" class="fw-bold text-success fs-5">0.00</span>
+                </div>
             </div>
-            <img src="icon/paperplane transparent.jpg" class="paper-plane" alt="paper plane">
-            <div class="success-animation">
-                <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
-                    <circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none"/>
-                    <path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
-                </svg>
-                <p class="success-message">Saved Successfully</p>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table id="samity-table" class="table table-hover table-striped align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Khata</th>
+                                <th>Deposit</th>
+                                <th>Loan Issue</th>
+                                <th>Fine</th>
+                                <th>Due</th>
+                                <th>Interest</th>
+                                <th>Parisodh</th>
+                                <th>Total</th>
+                                <th>Total Loan</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Rows inserted by JS -->
+                        </tbody>
+                        <tfoot class="bg-light fw-bold">
+                             <tr id="summary-row" class="table-primary">
+                                <td>SUMMARY</td>
+                                <td id="total-khata">0</td>
+                                <td id="total-deposit">0</td>
+                                <td id="total-loan-issued">0</td>
+                                <td id="total-fine">0</td>
+                                <td id="total-due">0</td>
+                                <td id="total-interest">0</td>
+                                <td id="total-parisodh">0</td>
+                                <td id="total-total">0</td>
+                                <td id="total-total-loan">0</td>
+                                <td></td>
+                            </tr>
+                            <tr id="expense-row" class="table-secondary">
+                                <td>Expense</td>
+                                <td colspan="1"><input type="text" id="expense-name" class="form-control form-control-sm" placeholder="Reason"></td>
+                                <td><input type="number" id="expense-amount" class="form-control form-control-sm text-end" min="0" value="0"></td>
+                                <td colspan="5" class="text-end text-muted">Outstanding:</td>
+                                <td id="outstanding-amount" class="text-danger">0</td>
+                                <td colspan="2"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-white border-0 py-3 text-end">
+                <button id="add-new-btn" class="btn btn-primary btn-custom shadow me-2"><i class="fas fa-plus me-1"></i> New Customer</button>
+                <button id="edit-btn" class="btn btn-warning btn-custom text-white me-2 shadow-sm"><i class="fas fa-edit me-1"></i> Edit Old</button>
+                <button id="save-btn" class="btn btn-success btn-custom shadow-lg px-5"><i class="fas fa-save me-1"></i> SAVE DATA</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Modals & Animations -->
+    
+    <!-- Date Selection Modal (Bootstrap Modal) -->
+    <div class="modal fade" id="dateSelectionModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-calendar-day me-2"></i>Select Working Date</h5>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <p class="text-muted mb-4">Please confirm the date for today's entry.</p>
+                    <input type="date" id="modal-date-picker" class="form-control form-control-lg text-center mb-3">
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" id="modal-date-confirm-btn" class="btn btn-primary btn-lg px-5 rounded-pill">Confirm Date</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Absent Details Modal -->
+    <div class="modal fade" id="absent-details-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-user-clock me-2"></i>Absentee Report</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h4 id="absent-customer-name" class="text-center text-primary fw-bold mb-4">Customer Name</h4>
+                    
+                    <div class="row g-3 text-center">
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded shadow-sm">
+                                <h2 id="absent-days-count" class="text-danger fw-bold mb-0">0</h2>
+                                <small class="text-muted text-uppercase fw-bold">Days Missed</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded shadow-sm">
+                                <h2 id="absent-missed-deposit" class="text-dark fw-bold mb-0">0</h2>
+                                <small class="text-muted text-uppercase fw-bold">Missed Deposits</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <ul class="list-group list-group-flush mt-4">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-percentage text-secondary me-2"></i> Pending Interest</span>
+                            <span id="absent-pending-interest" class="fw-bold">0</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-exclamation-circle text-danger me-2"></i> Total Fine (History)</span>
+                            <span id="absent-total-fine" class="fw-bold">0</span>
+                        </li>
+                    </ul>
+                    
+                    <div class="alert alert-info mt-3 mb-0 small">
+                        <i class="fas fa-info-circle me-1"></i> "Missed Deposits" is calculated based on their last known regular deposit amount.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <!-- Bootstrap 5 Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js"></script>
+
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="script.js"></script>
+
+    <!-- Modern Save Animation Modal -->
+    <div id="save-animation-modal" class="animation-modal">
+        <div class="modern-save-container">
+            <canvas id="three-canvas"></canvas>
+            <div id="text-overlay">
+                <h3 class="save-status-text" id="save-status">INITIALIZING 3D...</h3>
+                <p class="save-subtext">Encrypting Data Objects...</p>
             </div>
         </div>
     </div>

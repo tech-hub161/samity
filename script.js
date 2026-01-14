@@ -1,104 +1,97 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // DOM Elements
+    // --- Configuration & Elements ---
     const datePicker = document.getElementById('date-picker');
     const weeksDisplay = document.getElementById('weeks-display');
     const searchBar = document.getElementById('search-bar');
     const samityTableBody = document.querySelector('#samity-table tbody');
+    
+    // Buttons
     const addNewBtn = document.getElementById('add-new-btn');
     const editBtn = document.getElementById('edit-btn');
     const saveBtn = document.getElementById('save-btn');
     const reportBtn = document.getElementById('report-btn');
-    const dateSelectionModal = document.getElementById('date-selection-modal');
+    const backupBtn = document.getElementById('backup-btn');
+    const restoreBtn = document.getElementById('restore-btn');
+    const clearDataBtn = document.getElementById('clear-data-btn');
+    
+    // Modals
+    const dateSelectionModalEl = document.getElementById('dateSelectionModal');
+    const dateSelectionModal = new bootstrap.Modal(dateSelectionModalEl);
     const modalDatePicker = document.getElementById('modal-date-picker');
     const modalDateConfirmBtn = document.getElementById('modal-date-confirm-btn');
     const saveAnimationModal = document.getElementById('save-animation-modal');
-    const paperPlane = document.querySelector('.paper-plane');
-    const clouds = document.querySelectorAll('.cloud');
-    const successAnimation = document.querySelector('.success-animation');
-    const checkmarkCircle = document.querySelector('.checkmark__circle');
-    const checkmarkCheck = document.querySelector('.checkmark__check');
+    
+    // Absent Details Modal
+    const absentDetailsModalEl = document.getElementById('absent-details-modal');
+    const absentDetailsModal = new bootstrap.Modal(absentDetailsModalEl);
 
     const today = new Date();
     const todayISO = today.toISOString().split('T')[0];
+    const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
 
-    // --- Date Prompting Logic ---
-    const FOUR_HOURS_MS = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
-    const lastDatePromptTimestamp = localStorage.getItem('lastDatePromptTimestamp');
-    const now = new Date().getTime();
-    const lastSavedDate = localStorage.getItem('lastSavedDate');
-    const selectedDateFromStorage = localStorage.getItem('selectedDate');
+    let currentOpeningBalance = 0;
+    let isCurrentDaySaved = false;
 
-    if (!lastDatePromptTimestamp || (now - parseInt(lastDatePromptTimestamp)) > FOUR_HOURS_MS) {
-        // Show modal if it's the first time or 4 hours passed since last prompt
-        Object.assign(dateSelectionModal.style, {
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-        });
-        modalDatePicker.value = todayISO; // Set modal picker to today
-    } else {
-        // Proceed normally, ensure datePicker is set and data loaded
-        // Prioritize lastSavedDate if available, otherwise use selectedDateFromStorage or today
-        datePicker.value = lastSavedDate || selectedDateFromStorage || todayISO;
-        localStorage.setItem('selectedDate', datePicker.value); // Ensure selectedDate is up-to-date
-        initializeDataEntry();
+    // --- Initialization Logic ---
+
+    function init() {
+        checkDatePrompt();
+        setupEventListeners();
     }
 
-    modalDateConfirmBtn.addEventListener('click', () => {
-        const selectedDate = modalDatePicker.value;
-        if (selectedDate) {
-            datePicker.value = selectedDate;
-            localStorage.setItem('selectedDate', selectedDate); // Store the selected date
-            localStorage.setItem('lastDatePromptTimestamp', new Date().getTime().toString());
-            dateSelectionModal.style.display = 'none';
-            initializeDataEntry(); // Load data for the newly selected date
-        } else {
-            alert('Please select a date.');
-        }
-    });
+    function checkDatePrompt() {
+        const lastDatePromptTimestamp = localStorage.getItem('lastDatePromptTimestamp');
+        const now = new Date().getTime();
+        const lastSavedDate = localStorage.getItem('lastSavedDate');
+        const selectedDateFromStorage = localStorage.getItem('selectedDate');
 
-    function initializeDataEntry() {
-        // --- Event Listeners ---
+        if (!lastDatePromptTimestamp || (now - parseInt(lastDatePromptTimestamp)) > FOUR_HOURS_MS) {
+            modalDatePicker.value = todayISO;
+            dateSelectionModal.show();
+        } else {
+            datePicker.value = lastSavedDate || selectedDateFromStorage || todayISO;
+            localStorage.setItem('selectedDate', datePicker.value);
+            initializeDataEntry();
+        }
+    }
+
+    function setupEventListeners() {
+        modalDateConfirmBtn.addEventListener('click', () => {
+            const selectedDate = modalDatePicker.value;
+            if (selectedDate) {
+                datePicker.value = selectedDate;
+                localStorage.setItem('selectedDate', selectedDate);
+                localStorage.setItem('lastDatePromptTimestamp', new Date().getTime().toString());
+                dateSelectionModal.hide();
+                initializeDataEntry();
+            } else {
+                Swal.fire('Error', 'Please select a date.', 'error');
+            }
+        });
+
         addNewBtn.addEventListener('click', addNewCustomer);
         editBtn.addEventListener('click', editCustomerData);
-        saveBtn.addEventListener('click', () => saveData(false)); // Wrap to prevent event object being passed
-        reportBtn.addEventListener('click', () => {
-            const expenseData = {
-                name: document.getElementById('expense-name').value,
-                amount: document.getElementById('expense-amount').value,
-                outstanding: document.getElementById('outstanding-amount').textContent
-            };
-            localStorage.setItem('temp-expense-data', JSON.stringify(expenseData));
-
-            const summaryData = {
-                totalKhata: document.getElementById('total-khata').textContent,
-                totalDeposit: document.getElementById('total-deposit').textContent,
-                totalLoanIssued: document.getElementById('total-loan-issued').textContent,
-                totalFine: document.getElementById('total-fine').textContent,
-                totalDue: document.getElementById('total-due').textContent,
-                totalInterest: document.getElementById('total-interest').textContent,
-                totalParisodh: document.getElementById('total-parisodh').textContent,
-                totalTotal: document.getElementById('total-total').textContent,
-                totalTotalLoan: document.getElementById('total-total-loan').textContent
-            };
-            localStorage.setItem('temp-summary-data', JSON.stringify(summaryData));
-
-            window.location.href = 'report/report.html';
-        });
+        saveBtn.addEventListener('click', () => saveData(false));
+        
+        reportBtn.addEventListener('click', generateReport);
         searchBar.addEventListener('input', filterTable);
         datePicker.addEventListener('change', loadData);
+        
         samityTableBody.addEventListener('input', handleTableInput);
-        document.getElementById('expense-amount').addEventListener('input', updateOutstanding);
-        document.getElementById('backup-btn').addEventListener('click', backupData);
-        document.getElementById('restore-btn').addEventListener('click', restoreData);
-        document.getElementById('clear-data-btn').addEventListener('click', clearAllData);
         samityTableBody.addEventListener('focusin', (event) => {
             if (event.target.tagName === 'INPUT' && event.target.type === 'number') {
                 event.target.select();
             }
         });
 
-        // Initial Load
+        document.getElementById('expense-amount').addEventListener('input', updateOutstanding);
+        
+        backupBtn.addEventListener('click', backupData);
+        restoreBtn.addEventListener('click', restoreData);
+        clearDataBtn.addEventListener('click', clearAllData);
+    }
+
+    function initializeDataEntry() {
         checkForEditRequest();
         loadData();
     }
@@ -107,33 +100,45 @@ document.addEventListener('DOMContentLoaded', () => {
         const editRequest = localStorage.getItem('edit-request');
         if (editRequest) {
             const { date, name } = JSON.parse(editRequest);
-            
-            // Set the date picker to the requested date
             datePicker.value = date;
-            
-            // The loadData function will now automatically load the data for this date.
-            // We can remove the request from localStorage now.
             localStorage.removeItem('edit-request');
-
-            // Optional: alert the user
-            alert(`Loading data for "${name}" on ${date} for editing.`);
+            Swal.fire({
+                icon: 'info',
+                title: 'Edit Mode',
+                text: `Loading data for "${name}" on ${date}.`,
+                timer: 2000,
+                showConfirmButton: false
+            });
         }
     }
 
-    function addNewCustomer() {
-        const name = prompt("Enter the new customer's name:");
-        if (name && name.trim() !== '') {
-            const existingNames = Array.from(samityTableBody.querySelectorAll('td[data-field="name"]')).map(td => td.textContent.toLowerCase());
-            if (existingNames.includes(name.trim().toLowerCase())) {
-                alert("A customer with this name already exists.");
+    async function addNewCustomer() {
+        const result = await Swal.fire({
+            title: 'New Customer',
+            input: 'text',
+            inputLabel: "Enter the customer's name",
+            showCancelButton: true,
+            inputValidator: (value) => {
+                if (!value || value.trim() === '') {
+                    return 'Name cannot be empty!';
+                }
+            }
+        });
+
+        if (result.isConfirmed) {
+            const name = result.value.trim();
+            const existingNames = Array.from(samityTableBody.querySelectorAll('td[data-field="name"]')).map(td => td.querySelector('.customer-name-display').textContent.toLowerCase());
+            
+            if (existingNames.includes(name.toLowerCase())) {
+                Swal.fire('Error', "A customer with this name already exists.", 'error');
                 return;
             }
 
             const previousData = getPreviousDayData();
-            const lastWeekData = previousData.find(c => c.name.toLowerCase() === name.trim().toLowerCase());
+            const lastWeekData = previousData.find(c => c.name.toLowerCase() === name.toLowerCase());
 
             const newRowData = {
-                name: name.trim(),
+                name: name,
                 khata: lastWeekData ? lastWeekData.khata : '',
                 deposit: 0, loan: 0, fine: 0, due: 0, parisodh: 0,
                 interest: 0, total: 0,
@@ -145,6 +150,14 @@ document.addEventListener('DOMContentLoaded', () => {
             samityTableBody.appendChild(newRow);
             calculateRow(newRow, lastWeekData);
             updateSummary();
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Added!',
+                text: `${name} has been added.`,
+                timer: 1500,
+                showConfirmButton: false
+            });
         }
     }
 
@@ -152,37 +165,117 @@ document.addEventListener('DOMContentLoaded', () => {
         const row = document.createElement('tr');
         row.dataset.name = data.name;
         row.dataset.loanIssueDate = data.loanIssueDate || '';
+        
+        // Helper to create input with Bootstrap styling
+        const createInput = (field, val, type = 'number') => `
+            <input type="${type}" data-field="${field}" 
+                   class="form-control form-control-sm text-end border-0 bg-transparent" 
+                   value="${val || (type === 'number' ? 0 : '')}" 
+                   ${type === 'number' ? 'min="0"' : ''}>`;
 
         row.innerHTML = `
-            <td data-field="name" class="name-cell">
-                <span class="customer-name-display">${data.name}</span>
-                <input type="text" class="customer-name-edit" value="${data.name}" style="display:none;">
-                <span class="action-btn edit-name-btn" title="Edit Name">✏️</span>
+            <td data-field="name" class="name-cell fw-bold">
+                <div class="d-flex align-items-center justify-content-center position-relative w-100">
+                    <div class="text-center text-wrap" style="padding-right: 25px; word-break: break-word;">
+                        <span class="customer-name-display">${data.name}</span>
+                        <input type="text" class="customer-name-edit form-control form-control-sm text-center" value="${data.name}" style="display:none;">
+                    </div>
+                    <span class="action-btn edit-name-btn text-warning position-absolute end-0" style="cursor:pointer;" title="Edit Name"><i class="fas fa-pencil-alt"></i></span>
+                </div>
             </td>
-            <td><input type="text" data-field="khata" value="${data.khata || ''}"></td>
-            <td><input type="number" data-field="deposit" value="${data.deposit || 0}" min="0"></td>
-            <td><input type="number" data-field="loan" value="${data.loan || 0}" min="0"></td>
-            <td><input type="number" data-field="fine" value="${data.fine || 0}" min="0"></td>
-            <td><input type="number" data-field="due" value="${data.due || 0}" min="0"></td>
-            <td data-field="interest" class="non-editable">${(data.interest || 0).toFixed(2)}</td>
-            <td><input type="number" data-field="parisodh" value="${data.parisodh || 0}" min="0"></td>
-            <td data-field="total" class="non-editable">${(data.total || 0).toFixed(2)}</td>
-            <td data-field="totalLoan" class="non-editable">${(data.totalLoan || 0).toFixed(2)}</td>
-            <td><button class="action-btn delete-btn">Delete</button></td>
+            <td>${createInput('khata', data.khata, 'text')}</td>
+            <td>${createInput('deposit', data.deposit)}</td>
+            <td>${createInput('loan', data.loan)}</td>
+            <td>${createInput('fine', data.fine)}</td>
+            <td>${createInput('due', data.due)}</td>
+            <td data-field="interest" class="text-muted">${Math.round(data.interest || 0)}</td>
+            <td>${createInput('parisodh', data.parisodh)}</td>
+            <td data-field="total" class="fw-bold text-dark">${Math.round(data.total || 0)}</td>
+            <td data-field="totalLoan" class="text-danger fw-bold">${Math.round(data.totalLoan || 0)}</td>
+            <td>
+                <div class="d-flex justify-content-center align-items-center gap-2">
+                    <button class="btn btn-sm btn-info info-btn rounded-circle" style="display: none;" title="View Absence Details"><i class="fas fa-info-circle text-white"></i></button>
+                    <button class="btn btn-sm btn-outline-warning absent-btn rounded-circle" title="Mark Absent"><i class="fas fa-user-times"></i></button>
+                    <button class="btn btn-sm btn-outline-danger delete-btn rounded-circle"><i class="fas fa-trash"></i></button>
+                </div>
+            </td>
         `;
 
-        row.querySelector('.delete-btn').addEventListener('click', (e) => {
-            if (confirm(`Are you sure you want to delete ${data.name}? This is permanent.`)) {
+        // Absent Handler
+        const absentBtn = row.querySelector('.absent-btn');
+        const infoBtn = row.querySelector('.info-btn');
+
+        // Check if loading saved data that was absent
+        if (data.isAbsent) {
+            row.classList.add('missing-row');
+            absentBtn.classList.replace('btn-outline-warning', 'btn-warning');
+            absentBtn.innerHTML = '<i class="fas fa-ban"></i>';
+            infoBtn.style.display = 'inline-block';
+        } else if (data.wasPreviouslyAbsent) {
+            infoBtn.style.display = 'inline-block';
+        }
+
+        absentBtn.addEventListener('click', () => {
+            row.classList.toggle('missing-row');
+            const inputs = row.querySelectorAll('input[type="number"]');
+            
+            if (row.classList.contains('missing-row')) {
+                const depositInput = row.querySelector('[data-field="deposit"]');
+                row.dataset.originalDeposit = depositInput.value;
+
+                inputs.forEach(input => input.value = 0);
+                absentBtn.classList.replace('btn-outline-warning', 'btn-warning');
+                absentBtn.innerHTML = '<i class="fas fa-ban"></i>';
+                infoBtn.style.display = 'inline-block';
+            } else {
+                const depositInput = row.querySelector('[data-field="deposit"]');
+                if (row.dataset.originalDeposit) {
+                    depositInput.value = row.dataset.originalDeposit;
+                } else {
+                    depositInput.value = data.deposit || 0; 
+                }
+                
+                absentBtn.classList.replace('btn-warning', 'btn-outline-warning');
+                absentBtn.innerHTML = '<i class="fas fa-user-times"></i>';
+                infoBtn.style.display = 'none';
+            }
+            
+            const previousDataObj = getPreviousDayData(); 
+            const lastWeekData = previousDataObj.data.find(c => c.name.toLowerCase() === data.name.toLowerCase());
+            calculateRow(row, lastWeekData);
+            updateSummary();
+        });
+
+        // Info Handler
+        infoBtn.addEventListener('click', () => {
+            showAbsentDetails(data.name, row);
+        });
+
+        // Delete Handler
+        row.querySelector('.delete-btn').addEventListener('click', async (e) => {
+            const result = await Swal.fire({
+                title: 'Are you sure?',
+                text: `Delete ${data.name}? This is permanent.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!'
+            });
+
+            if (result.isConfirmed) {
                 e.target.closest('tr').remove();
                 updateSummary();
-                saveData(true); // Save the data silently to make the deletion permanent
+                saveData(true);
+                Swal.fire('Deleted!', 'Customer has been removed.', 'success');
             }
         });
 
-        // Event listener for editing customer name
+        // Edit Name Handler
         const editNameBtn = row.querySelector('.edit-name-btn');
         const customerNameDisplay = row.querySelector('.customer-name-display');
         const customerNameEditInput = row.querySelector('.customer-name-edit');
+        const icon = editNameBtn.querySelector('i');
 
         editNameBtn.addEventListener('click', () => {
             if (editNameBtn.title === 'Edit Name') {
@@ -190,30 +283,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 customerNameEditInput.style.display = 'inline-block';
                 customerNameEditInput.focus();
                 editNameBtn.title = 'Save Name';
+                icon.className = 'fas fa-check text-success';
             } else { // Save Name
                 const oldName = row.dataset.name;
                 const newName = customerNameEditInput.value.trim();
 
                 if (newName && newName !== oldName) {
                     const existingNames = Array.from(samityTableBody.querySelectorAll('tr'))
-                                            .filter(r => r !== row) // Exclude current row
+                                            .filter(r => r !== row)
                                             .map(r => r.dataset.name.toLowerCase());
                     if (existingNames.includes(newName.toLowerCase())) {
-                        alert("A customer with this name already exists.");
-                        customerNameEditInput.value = oldName; // Revert to old name
+                        Swal.fire('Error', "Name already exists.", 'error');
+                        customerNameEditInput.value = oldName;
                         return;
                     }
 
-                    // Update all occurrences of the name in the current view
-                    // This is crucial if name is used as an identifier for other operations
                     row.dataset.name = newName;
                     customerNameDisplay.textContent = newName;
                     customerNameEditInput.value = newName;
-                    // Note: Actual saving to localStorage for all affected dates
-                    // will happen when the main 'Save' button is clicked.
-                    // This change only affects the current session's table view.
                 } else if (!newName) {
-                    alert("Customer name cannot be empty.");
+                    Swal.fire('Error', "Name cannot be empty.", 'error');
                     customerNameEditInput.value = oldName;
                     return;
                 }
@@ -221,6 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 customerNameDisplay.style.display = 'inline-block';
                 customerNameEditInput.style.display = 'none';
                 editNameBtn.title = 'Edit Name';
+                icon.className = 'fas fa-pencil-alt';
             }
         });
 
@@ -230,12 +320,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleTableInput(event) {
         if (event.target.tagName === 'INPUT') {
             const row = event.target.closest('tr');
-            
-            // Remove highlight on input, indicating the row has been worked on.
             row.classList.remove('highlight-row');
 
-            // Round off numeric inputs
+            // Visual feedback on edit
+            event.target.classList.add('bg-light'); // Highlight active input slightly
+
             if (event.target.type === 'number') {
+                // Ensure value is not empty string for calc
+                if(event.target.value === '') event.target.value = 0;
                 event.target.value = Math.round(event.target.value);
             }
 
@@ -254,11 +346,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function calculateRow(row, lastWeekData) {
-        const deposit = parseFloat(row.querySelector('[data-field="deposit"]').value) || 0;
-        const newLoan = parseFloat(row.querySelector('[data-field="loan"]').value) || 0;
-        const fine = parseFloat(row.querySelector('[data-field="fine"]').value) || 0;
-        const due = parseFloat(row.querySelector('[data-field="due"]').value) || 0;
-        const parisodh = parseFloat(row.querySelector('[data-field="parisodh"]').value) || 0;
+        const getVal = (field) => parseFloat(row.querySelector(`[data-field="${field}"]`).value) || 0;
+        
+        const deposit = getVal('deposit');
+        const newLoan = getVal('loan');
+        const fine = getVal('fine');
+        const due = getVal('due');
+        const parisodh = getVal('parisodh');
 
         const previousTotalLoan = lastWeekData ? lastWeekData.totalLoan : 0;
         const loanIssueDate = row.dataset.loanIssueDate ? new Date(row.dataset.loanIssueDate) : null;
@@ -268,18 +362,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (previousTotalLoan > 0 && loanIssueDate) {
             const timeDiff = currentDate.getTime() - loanIssueDate.getTime();
             const dayDiff = timeDiff / (1000 * 3600 * 24);
-            // Interest starts from the next week (>= 7 days)
             if (dayDiff >= 7) {
-                interest = previousTotalLoan * 0.01;
+                interest = Math.round(previousTotalLoan * 0.01);
             }
         }
 
-        const total = deposit + fine + due + interest + parisodh;
-        const currentTotalLoan = previousTotalLoan + newLoan - parisodh;
+        const total = Math.round(deposit + fine + due + interest + parisodh);
+        const currentTotalLoan = Math.round(previousTotalLoan + newLoan - parisodh);
 
-        row.querySelector('[data-field="interest"]').textContent = interest.toFixed(2);
-        row.querySelector('[data-field="total"]').textContent = total.toFixed(2);
-        row.querySelector('[data-field="totalLoan"]').textContent = currentTotalLoan.toFixed(2);
+        row.querySelector('[data-field="interest"]').textContent = interest;
+        row.querySelector('[data-field="total"]').textContent = total;
+        row.querySelector('[data-field="totalLoan"]').textContent = currentTotalLoan;
     }
 
     function updateSummary() {
@@ -290,28 +383,32 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         allRows.forEach(row => {
-            if (row.style.display !== 'none') { // Only include visible rows in summary
-                summary.khata += parseFloat(row.querySelector('[data-field="khata"]').value) || 0;
-                summary.deposit += parseFloat(row.querySelector('[data-field="deposit"]').value) || 0;
-                summary.loan += parseFloat(row.querySelector('[data-field="loan"]').value) || 0;
-                summary.fine += parseFloat(row.querySelector('[data-field="fine"]').value) || 0;
-                summary.due += parseFloat(row.querySelector('[data-field="due"]').value) || 0;
-                summary.interest += parseFloat(row.querySelector('[data-field="interest"]').textContent) || 0;
-                summary.parisodh += parseFloat(row.querySelector('[data-field="parisodh"]').value) || 0;
-                summary.total += parseFloat(row.querySelector('[data-field="total"]').textContent) || 0;
-                summary.totalLoan += parseFloat(row.querySelector('[data-field="totalLoan"]').textContent) || 0;
+            if (row.style.display !== 'none') {
+                const getVal = (sel) => parseFloat(row.querySelector(sel).value || row.querySelector(sel).textContent) || 0;
+                
+                summary.khata += getVal('[data-field="khata"]');
+                summary.deposit += getVal('[data-field="deposit"]');
+                summary.loan += getVal('[data-field="loan"]');
+                summary.fine += getVal('[data-field="fine"]');
+                summary.due += getVal('[data-field="due"]');
+                summary.interest += getVal('[data-field="interest"]');
+                summary.parisodh += getVal('[data-field="parisodh"]');
+                summary.total += getVal('[data-field="total"]');
+                summary.totalLoan += getVal('[data-field="totalLoan"]');
             }
         });
 
-        document.getElementById('total-khata').textContent = summary.khata.toFixed(0);
-        document.getElementById('total-deposit').textContent = summary.deposit.toFixed(2);
-        document.getElementById('total-loan-issued').textContent = summary.loan.toFixed(2);
-        document.getElementById('total-fine').textContent = summary.fine.toFixed(2);
-        document.getElementById('total-due').textContent = summary.due.toFixed(2);
-        document.getElementById('total-interest').textContent = summary.interest.toFixed(2);
-        document.getElementById('total-parisodh').textContent = summary.parisodh.toFixed(2);
-        document.getElementById('total-total').textContent = summary.total.toFixed(2);
-        document.getElementById('total-total-loan').textContent = summary.totalLoan.toFixed(2);
+        const setSummary = (id, val) => document.getElementById(id).textContent = Math.round(val);
+        
+        document.getElementById('total-khata').textContent = Math.round(summary.khata);
+        setSummary('total-deposit', summary.deposit);
+        setSummary('total-loan-issued', summary.loan);
+        setSummary('total-fine', summary.fine);
+        setSummary('total-due', summary.due);
+        setSummary('total-interest', summary.interest);
+        setSummary('total-parisodh', summary.parisodh);
+        setSummary('total-total', summary.total);
+        setSummary('total-total-loan', summary.totalLoan);
 
         updateOutstanding();
     }
@@ -319,8 +416,117 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateOutstanding() {
         const totalTotal = parseFloat(document.getElementById('total-total').textContent) || 0;
         const expenseAmount = parseFloat(document.getElementById('expense-amount').value) || 0;
-        const outstandingAmount = totalTotal - expenseAmount;
-        document.getElementById('outstanding-amount').textContent = outstandingAmount.toFixed(2);
+        
+        // Calculate Outstanding (Current Balance)
+        // If not saved, we only show the balance carried from previous days.
+        // Once saved, we show Opening + Today's Net.
+        let outstandingVal;
+        if (isCurrentDaySaved) {
+            outstandingVal = currentOpeningBalance + totalTotal - expenseAmount;
+        } else {
+            outstandingVal = currentOpeningBalance;
+        }
+        
+        // Format to INR
+        const inrFormatter = new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: 'INR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        });
+        
+        const formattedBalance = inrFormatter.format(outstandingVal);
+        
+        document.getElementById('outstanding-amount').textContent = Math.round(outstandingVal);
+        
+        const headerBalance = document.getElementById('header-balance-display');
+        headerBalance.textContent = formattedBalance;
+        
+        // Update color based on balance state
+        if (outstandingVal < 0) {
+            headerBalance.classList.replace('text-success', 'text-danger');
+        } else {
+            headerBalance.classList.replace('text-danger', 'text-success');
+             const footerOutstanding = document.getElementById('outstanding-amount');
+             footerOutstanding.className = outstandingVal < 0 ? 'text-danger fw-bold' : 'text-success fw-bold';
+        }
+    }
+
+    function generateReport() {
+        const expenseData = {
+            name: document.getElementById('expense-name').value,
+            amount: document.getElementById('expense-amount').value,
+            outstanding: document.getElementById('outstanding-amount').textContent
+        };
+        localStorage.setItem('temp-expense-data', JSON.stringify(expenseData));
+
+        const summaryData = {
+            totalKhata: document.getElementById('total-khata').textContent,
+            totalDeposit: document.getElementById('total-deposit').textContent,
+            totalLoanIssued: document.getElementById('total-loan-issued').textContent,
+            totalFine: document.getElementById('total-fine').textContent,
+            totalDue: document.getElementById('total-due').textContent,
+            totalInterest: document.getElementById('total-interest').textContent,
+            totalParisodh: document.getElementById('total-parisodh').textContent,
+            totalTotal: document.getElementById('total-total').textContent,
+            totalTotalLoan: document.getElementById('total-total-loan').textContent
+        };
+        localStorage.setItem('temp-summary-data', JSON.stringify(summaryData));
+
+        window.location.href = 'report/report.html';
+    }
+
+    function showAbsentDetails(customerName, currentRow) {
+        let missedDays = 0;
+        let missedDeposit = 0;
+        let totalFine = 0;
+        
+        // Scan history
+        const allKeys = Object.keys(localStorage).filter(k => k.startsWith('samity-data-')).sort();
+        
+        // We need to estimate what the "Regular" deposit is for this customer to calculate missed amount.
+        // We'll look for the last non-zero deposit in history.
+        let regularDeposit = 0;
+        // Search backwards for the last valid deposit
+        for (let i = allKeys.length - 1; i >= 0; i--) {
+            const records = JSON.parse(localStorage.getItem(allKeys[i]) || '[]');
+            const record = records.find(r => r.name.toLowerCase() === customerName.toLowerCase());
+            if (record && record.deposit > 0) {
+                regularDeposit = record.deposit;
+                break;
+            }
+        }
+        
+        // If still 0, check the current row's original/draft deposit if available
+        if (regularDeposit === 0 && currentRow.dataset.originalDeposit) {
+            regularDeposit = parseFloat(currentRow.dataset.originalDeposit) || 0;
+        }
+
+        allKeys.forEach(key => {
+            const records = JSON.parse(localStorage.getItem(key) || '[]');
+            const record = records.find(r => r.name.toLowerCase() === customerName.toLowerCase());
+            
+            if (record) {
+                // Check if marked absent explicitly OR if deposit was 0 (implicit absence)
+                if (record.isAbsent || record.deposit === 0) {
+                    missedDays++;
+                    missedDeposit += regularDeposit; // Add the estimated regular deposit
+                }
+                totalFine += (parseFloat(record.fine) || 0); // Accumulate historical fines
+            }
+        });
+
+        // Current values from the row (for "Pending Interest" which is calculated live)
+        const currentInterest = currentRow.querySelector('[data-field="interest"]').textContent;
+        
+        // Populate Modal
+        document.getElementById('absent-customer-name').textContent = customerName;
+        document.getElementById('absent-days-count').textContent = missedDays;
+        document.getElementById('absent-missed-deposit').textContent = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(missedDeposit);
+        document.getElementById('absent-pending-interest').textContent = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(currentInterest);
+        document.getElementById('absent-total-fine').textContent = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(totalFine);
+
+        absentDetailsModal.show();
     }
 
     function saveData(silent = false) {
@@ -330,170 +536,301 @@ document.addEventListener('DOMContentLoaded', () => {
         const previousData = getPreviousDayData();
 
         rows.forEach(row => {
-            // Re-calculate all values at the moment of saving to ensure data integrity
-            const lastWeekData = previousData.find(c => c.name.toLowerCase() === row.dataset.name.toLowerCase());
+             // Re-calculate to be safe
+             const lastWeekData = previousData.find(c => c.name.toLowerCase() === row.dataset.name.toLowerCase());
+             calculateRow(row, lastWeekData);
 
-            const deposit = parseFloat(row.querySelector('[data-field="deposit"]').value) || 0;
-            const newLoan = parseFloat(row.querySelector('[data-field="loan"]').value) || 0;
-            const fine = parseFloat(row.querySelector('[data-field="fine"]').value) || 0;
-            const due = parseFloat(row.querySelector('[data-field="due"]').value) || 0;
-            const parisodh = parseFloat(row.querySelector('[data-field="parisodh"]').value) || 0;
+             const getVal = (field) => parseFloat(row.querySelector(`[data-field="${field}"]`).value) || 0;
+             const getText = (field) => parseFloat(row.querySelector(`[data-field="${field}"]`).textContent) || 0;
 
-            const previousTotalLoan = lastWeekData ? lastWeekData.totalLoan : 0;
-            const loanIssueDate = row.dataset.loanIssueDate ? new Date(row.dataset.loanIssueDate) : null;
-            const currentDate = new Date(datePicker.value);
-
-            let interest = 0;
-            if (previousTotalLoan > 0 && loanIssueDate) {
-                const timeDiff = currentDate.getTime() - loanIssueDate.getTime();
-                const dayDiff = timeDiff / (1000 * 3600 * 24);
-                if (dayDiff >= 7) {
-                    interest = previousTotalLoan * 0.01;
-                }
-            }
-
-            const total = deposit + fine + due + interest + parisodh;
-            const currentTotalLoan = previousTotalLoan + newLoan - parisodh;
-
-            const rowData = {
+             const rowData = {
                 name: row.dataset.name,
                 khata: row.querySelector('[data-field="khata"]').value,
-                deposit: deposit,
-                loan: newLoan,
-                fine: fine,
-                due: due,
-                interest: interest,
-                parisodh: parisodh,
-                total: total,
-                totalLoan: currentTotalLoan,
+                deposit: getVal('deposit'),
+                loan: getVal('loan'),
+                fine: getVal('fine'),
+                due: getVal('due'),
+                interest: getText('interest'),
+                parisodh: getVal('parisodh'),
+                total: getText('total'),
+                totalLoan: getText('totalLoan'),
                 loanIssueDate: row.dataset.loanIssueDate,
+                isAbsent: row.classList.contains('missing-row') // Save status
             };
             dataToSave.push(rowData);
         });
 
         localStorage.setItem(dateKey, JSON.stringify(dataToSave));
-        localStorage.setItem('lastSavedDate', datePicker.value); // Store the last saved date
+
+        // Save Expense Data for this date
+        const expenseKey = `samity-expense-${datePicker.value}`;
+        const expenseData = {
+            name: document.getElementById('expense-name').value,
+            amount: document.getElementById('expense-amount').value
+        };
+        localStorage.setItem(expenseKey, JSON.stringify(expenseData));
+
+        localStorage.setItem('lastSavedDate', datePicker.value);
         
+        // Mark as saved so the balance updates
+        isCurrentDaySaved = true;
+        updateSummary();
+
         if (!silent) {
             playSaveAnimation();
         }
 
         updateWeeksDisplay();
         
-        // Add saved-row class for visual feedback
+        // Feedback
         rows.forEach(row => {
             row.classList.add('saved-row');
-            setTimeout(() => {
-                row.classList.remove('saved-row');
-            }, 1000); // Remove class after 1 second
+            setTimeout(() => row.classList.remove('saved-row'), 1000);
         });
     }
 
-    function playSaveAnimation() {
-        if (typeof gsap === 'undefined') {
-            alert('GSAP not loaded');
-            return;
-        }
-        saveAnimationModal.style.display = 'flex';
+    // --- Three.js Logic for Save Animation ---
+    let renderer, scene, camera, saveMesh, animationId;
+    let particles = [];
 
-        clouds.forEach(cloud => {
-            gsap.set(cloud, {
-                y: Math.random() * 150 - 50, // Random y between -50 and 100
-                scale: Math.random() * 0.8 + 0.4 // Random scale between 0.4 and 1.2
-            });
+    function initThreeSaveScene() {
+        const canvas = document.getElementById('three-canvas');
+        if (!canvas) return;
+        const container = document.querySelector('.modern-save-container');
+        
+        // Scene Setup
+        scene = new THREE.Scene();
+        
+        camera = new THREE.PerspectiveCamera(75, container.offsetWidth / container.offsetHeight, 0.1, 1000);
+        camera.position.z = 5;
+
+        renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+        renderer.setSize(container.offsetWidth, container.offsetHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+
+        // Main Object: Glowing Data Crystal
+        const geometry = new THREE.IcosahedronGeometry(1.8, 0);
+        const material = new THREE.MeshPhongMaterial({
+            color: 0xffffff,
+            emissive: 0x4400aa,
+            side: THREE.DoubleSide,
+            flatShading: true,
+            transparent: true,
+            opacity: 0.9
         });
+        saveMesh = new THREE.Mesh(geometry, material);
+        scene.add(saveMesh);
 
-        const tl = gsap.timeline();
+        // Wireframe Overlay
+        const wiregeo = new THREE.WireframeGeometry(geometry);
+        const wiremat = new THREE.LineBasicMaterial({ color: 0x00ffff });
+        const wireframe = new THREE.LineSegments(wiregeo, wiremat);
+        saveMesh.add(wireframe);
 
-        tl.to(paperPlane, {
-            duration: 3,
-            x: 350,
-            ease: 'power1.inOut',
-        })
-        .to(paperPlane, {
-            duration: 0.2,
-            rotation: 10,
-            yoyo: true,
-            repeat: 15,
-            ease: 'power1.inOut'
-        }, 0)
-        .to(paperPlane, {
-            opacity: 0,
-            duration: 0.5
-        }, '-=0.5')
-        .to(clouds, {
-            x: 400,
-            duration: 4,
-            ease: 'linear',
-            stagger: 0.2,
-            opacity: 0
-        }, 0)
-        .to(successAnimation, {
-            opacity: 1,
-            visibility: 'visible',
-            duration: 0.5
-        })
-        .fromTo(checkmarkCircle, {
-            strokeDashoffset: 166
-        }, {
-            strokeDashoffset: 0,
-            duration: 1,
-            ease: 'power1.in'
-        })
-        .fromTo(checkmarkCheck, {
-            strokeDashoffset: 48
-        }, {
-            strokeDashoffset: 0,
-            duration: 0.8,
-            ease: 'power1.in'
-        }, '-=0.5')
-        .to(saveAnimationModal, {
-            opacity: 0,
-            duration: 0.5,
-            delay: 1,
-            onComplete: () => {
-                saveAnimationModal.style.display = 'none';
-                saveAnimationModal.style.opacity = 1; // Reset for next time
-                // Reset animation states
-                gsap.set(paperPlane, { x: 0, y: 0, opacity: 1, rotation: 0 });
-                gsap.set(clouds, { x: 0, opacity: 1 });
-                gsap.set(successAnimation, { opacity: 0, visibility: 'hidden' });
-                gsap.set(checkmarkCircle, { strokeDashoffset: 166 });
-                gsap.set(checkmarkCheck, { strokeDashoffset: 48 });
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0x404040);
+        scene.add(ambientLight);
+
+        const pointLight1 = new THREE.PointLight(0xff00cc, 2, 50); // Pink
+        pointLight1.position.set(-5, 5, 5);
+        scene.add(pointLight1);
+
+        const pointLight2 = new THREE.PointLight(0x00f2fe, 2, 50); // Cyan
+        pointLight2.position.set(5, -5, 5);
+        scene.add(pointLight2);
+    }
+
+    function animateThree() {
+        if (!scene || !camera || !renderer) return;
+        animationId = requestAnimationFrame(animateThree);
+        
+        if (saveMesh) {
+            saveMesh.rotation.x += 0.01;
+            saveMesh.rotation.y += 0.02;
+        }
+        
+        // Animate Success Particles
+        particles.forEach((p, i) => {
+            p.mesh.position.add(p.velocity);
+            p.mesh.rotation.x += 0.1;
+            p.mesh.rotation.y += 0.1;
+            p.life -= 0.02;
+            p.mesh.material.opacity = p.life;
+            if (p.life <= 0) {
+                scene.remove(p.mesh);
+                particles.splice(i, 1);
             }
         });
+
+        renderer.render(scene, camera);
+    }
+
+    function trigger3DSuccess() {
+        if (!scene || !saveMesh) return;
+        
+        // Change Mesh to "Success" State
+        saveMesh.material.color.setHex(0x00e676); // Green
+        saveMesh.material.emissive.setHex(0x004400);
+        saveMesh.children[0].material.color.setHex(0xccffcc); // Wireframe to light green
+        
+        // "Explosion" of particles
+        const particleGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+        const colors = [0x00e676, 0x00f2fe, 0xffd700]; // Green, Cyan, Gold
+        
+        for (let i = 0; i < 50; i++) {
+            const mat = new THREE.MeshBasicMaterial({
+                color: colors[Math.floor(Math.random() * colors.length)],
+                transparent: true
+            });
+            const p = new THREE.Mesh(particleGeo, mat);
+            
+            // Random direction
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(Math.random() * 2 - 1);
+            const speed = Math.random() * 0.2 + 0.1;
+            
+            p.position.copy(saveMesh.position);
+            p.velocity = new THREE.Vector3(
+                speed * Math.sin(phi) * Math.cos(theta),
+                speed * Math.sin(phi) * Math.sin(theta),
+                speed * Math.cos(phi)
+            );
+            p.life = 1.0;
+            
+            scene.add(p);
+            particles.push({ mesh: p, velocity: p.velocity, life: p.life });
+        }
+    }
+
+    function playSaveAnimation() {
+        // Fallback if libraries missing
+        if (typeof gsap === 'undefined' || typeof THREE === 'undefined') {
+            console.warn('GSAP or Three.js not loaded');
+            alert('Saved Successfully!'); // Fallback feedback
+            return;
+        }
+        
+        const modal = document.getElementById('save-animation-modal');
+        const statusText = document.getElementById('save-status');
+        const subtext = document.querySelector('.save-subtext');
+        
+        modal.style.display = 'flex';
+        
+        // Reset Text
+        statusText.textContent = "ENCRYPTING DATA...";
+        statusText.classList.remove('text-gradient-success');
+        statusText.style.color = "#fff";
+        subtext.textContent = "Securely storing blocks...";
+
+        try {
+            // Initialize / Reset 3D Scene
+            if (!renderer) {
+                initThreeSaveScene();
+                animateThree();
+            } else {
+                // Reset Mesh State if reused
+                if (saveMesh) {
+                    saveMesh.material.color.setHex(0xffffff);
+                    saveMesh.material.emissive.setHex(0x4400aa);
+                    saveMesh.children[0].material.color.setHex(0x00ffff);
+                    saveMesh.scale.set(1, 1, 1);
+                }
+                // Clear old particles
+                particles.forEach(p => scene.remove(p.mesh));
+                particles = [];
+            }
+        } catch (e) {
+            console.error("3D Init Failed", e);
+        }
+
+        // Sequence
+        setTimeout(() => {
+            trigger3DSuccess();
+            statusText.textContent = "DATA SECURED!";
+            statusText.classList.add('text-gradient-success');
+            subtext.textContent = "Transaction block verified.";
+            
+            // Pulse Effect
+            if (saveMesh) {
+                gsap.to(saveMesh.scale, { x: 1.5, y: 1.5, z: 1.5, duration: 0.2, yoyo: true, repeat: 1 });
+            }
+        }, 1500);
+
+        setTimeout(() => {
+            gsap.to(modal, {
+                opacity: 0,
+                duration: 0.5,
+                onComplete: () => {
+                    modal.style.display = 'none';
+                    modal.style.opacity = 1;
+                    // Stop animation loop to save resources
+                    if (animationId) cancelAnimationFrame(animationId);
+                }
+            });
+        }, 3000);
     }
 
     function loadData() {
         const dateKey = `samity-data-${datePicker.value}`;
-        const savedData = JSON.parse(localStorage.getItem(dateKey) || '[]');
+        const expenseKey = `samity-expense-${datePicker.value}`;
+        const savedDataRaw = localStorage.getItem(dateKey);
+        const savedData = JSON.parse(savedDataRaw || '[]');
+        const savedExpense = JSON.parse(localStorage.getItem(expenseKey) || 'null');
         const previousData = getPreviousDayData();
 
-        samityTableBody.innerHTML = ''; // Clear current table
+        // Check if data for the current date is already saved in storage
+        isCurrentDaySaved = !!savedDataRaw;
 
-        // Clear any existing saved-row or highlight-row classes before loading new data
-        samityTableBody.querySelectorAll('tr').forEach(row => {
-            row.classList.remove('saved-row', 'highlight-row');
+        // Calculate Opening Balance (Cumulative from all previous dates)
+        currentOpeningBalance = 0;
+        const currentPickerDate = datePicker.value;
+        const allKeys = Object.keys(localStorage).filter(k => k.startsWith('samity-data-'));
+        
+        allKeys.forEach(key => {
+            const dateStr = key.replace('samity-data-', '');
+            if (dateStr < currentPickerDate) {
+                const dayData = JSON.parse(localStorage.getItem(key) || '[]');
+                const dayTotal = dayData.reduce((acc, row) => acc + (parseFloat(row.total) || 0), 0);
+                
+                const expKey = `samity-expense-${dateStr}`;
+                const expData = JSON.parse(localStorage.getItem(expKey) || 'null');
+                const dayExpense = expData ? (parseFloat(expData.amount) || 0) : 0;
+                
+                currentOpeningBalance += (dayTotal - dayExpense);
+            }
         });
 
+        samityTableBody.innerHTML = '';
+        
+        // Handle Expense Loading
+        if (savedExpense) {
+            document.getElementById('expense-name').value = savedExpense.name;
+            document.getElementById('expense-amount').value = savedExpense.amount;
+        } else {
+            // Explicitly reset expense if no data saved for this date (Draft Mode)
+            document.getElementById('expense-name').value = '';
+            document.getElementById('expense-amount').value = 0;
+        }
+        
         let dataToLoad = savedData;
 
         if (savedData.length === 0) {
-            // If no data for today, load previous week's customers but reset daily fields.
+            // If no data for today, load previous available data as draft
+            // We carry over the Deposit amount for fast entry, but reset variable fields like New Loan, Fine, Parisodh
             dataToLoad = previousData.map(customerData => ({
-                // Explicitly define the object for a new day to prevent data leakage
                 name: customerData.name,
                 khata: customerData.khata,
                 totalLoan: customerData.totalLoan, // Carry over the running total loan
                 loanIssueDate: customerData.loanIssueDate, // Carry over for interest calculation
-                // Reset all daily transaction fields
-                deposit: 0,
-                loan: 0,
-                fine: 0,
-                due: 0,
-                parisodh: 0,
+                
+                deposit: customerData.deposit || 0, // Carry over deposit for recurring payments
+                loan: 0, // Reset new loan issue
+                fine: 0, // Reset fine
+                due: 0, // Reset due
+                parisodh: 0, // Reset repayment
                 interest: 0,
-                total: 0,
+                total: 0, // Will be recalculated
+                wasPreviouslyAbsent: customerData.isAbsent || (customerData.deposit === 0) // Flag for info button
             }));
         }
 
@@ -503,18 +840,11 @@ document.addEventListener('DOMContentLoaded', () => {
             samityTableBody.appendChild(row);
             calculateRow(row, lastWeekData);
 
-            // Highlighting logic
             if (lastWeekData) {
-                 const noChange = customerData.deposit === 0 && customerData.loan === 0 && customerData.fine === 0 && customerData.due === 0 && customerData.parisodh === 0;
+                 const noChange = customerData.deposit === lastWeekData.deposit && customerData.loan === 0 && customerData.fine === 0 && customerData.due === 0 && customerData.parisodh === 0;
                 if(noChange) {
-                    const prevDate = new Date(datePicker.value);
-                    prevDate.setDate(prevDate.getDate() - 7);
-                    const prevDateKey = `samity-data-${prevDate.toISOString().split('T')[0]}`;
-                    
-                    // Highlight only if there was saved data for the previous week (meaning it's not the first week)
-                    if(localStorage.getItem(prevDateKey)) {
-                        row.classList.add('highlight-row');
-                    }
+                    // Logic for highlighting can be adjusted if needed, currently highlights if strictly no change from previous week
+                    // row.classList.add('highlight-row'); 
                 }
             }
         });
@@ -524,10 +854,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function getPreviousDayData() {
-        const currentDate = new Date(datePicker.value);
-        currentDate.setDate(currentDate.getDate() - 7); // Go back 7 days for weekly logic
-        const previousDateKey = `samity-data-${currentDate.toISOString().split('T')[0]}`;
-        return JSON.parse(localStorage.getItem(previousDateKey) || '[]');
+        const currentPickerDate = datePicker.value;
+        // Filter for any saved data key that is strictly before the current selected date
+        const allKeys = Object.keys(localStorage).filter(k => k.startsWith('samity-data-'));
+        const previousKeys = allKeys.filter(k => {
+            const dateStr = k.replace('samity-data-', '');
+            return dateStr < currentPickerDate;
+        });
+
+        if (previousKeys.length === 0) return [];
+
+        // Sort to get the most recent one
+        previousKeys.sort(); 
+        const latestKey = previousKeys[previousKeys.length - 1];
+        
+        return JSON.parse(localStorage.getItem(latestKey) || '[]');
     }
 
     function filterTable() {
@@ -541,32 +882,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 row.style.display = 'none';
             }
         });
-        updateSummary(); // Recalculate summary based on visible rows
+        updateSummary();
     }
     
-    function editCustomerData() {
-        const customerName = prompt("Enter the name of the customer to edit:");
-        if (!customerName || customerName.trim() === '') return;
+    async function editCustomerData() {
+        const { value: customerName } = await Swal.fire({
+            title: 'Edit Customer',
+            input: 'text',
+            inputLabel: 'Enter customer name',
+            showCancelButton: true
+        });
 
-        const dateToEdit = prompt("Enter the date to edit (YYYY-MM-DD):");
-        if (!dateToEdit || !/^\d{4}-\d{2}-\d{2}$/.test(dateToEdit)) {
-            alert("Invalid date format. Please use YYYY-MM-DD.");
-            return;
-        }
+        if (!customerName) return;
+
+        const { value: dateToEdit } = await Swal.fire({
+            title: 'Select Date',
+            html: '<input type="date" id="swal-date" class="swal2-input">',
+            preConfirm: () => {
+                return document.getElementById('swal-date').value;
+            }
+        });
+
+        if (!dateToEdit) return;
 
         const dateKey = `samity-data-${dateToEdit}`;
         const savedData = JSON.parse(localStorage.getItem(dateKey) || '[]');
         const customerData = savedData.find(c => c.name.toLowerCase() === customerName.trim().toLowerCase());
 
         if (!customerData) {
-            alert(`No data found for "${customerName}" on ${dateToEdit}.`);
+            Swal.fire('Error', `No data found for "${customerName}" on ${dateToEdit}.`, 'error');
             return;
         }
 
-        // Set the date picker to the selected date and load the data
         datePicker.value = dateToEdit;
         loadData();
-        alert(`Now editing data for "${customerName}" for the date ${dateToEdit}. Make your changes and click "Save".`);
+        Swal.fire('Ready', `Now editing data for "${customerName}" for ${dateToEdit}.`, 'success');
     }
 
     function updateWeeksDisplay() {
@@ -578,7 +928,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const backupData = {};
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key.startsWith('samity-data-')) {
+            if (key.startsWith('samity-')) { // Updated to include expense data
                 backupData[key] = localStorage.getItem(key);
             }
         }
@@ -587,76 +937,186 @@ document.addEventListener('DOMContentLoaded', () => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'samity-backup.json';
+        a.download = `samity-backup-${new Date().toISOString().split('T')[0]}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        alert('Backup created successfully!');
+        Swal.fire('Success', 'Backup file downloaded!', 'success');
     }
 
     function restoreData() {
-        if (!confirm('Are you sure you want to restore data? This will overwrite all current data.')) {
-            return;
-        }
+        Swal.fire({
+            title: 'Restore Data',
+            text: "This will overwrite ALL current data. Are you sure?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Yes, Restore it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = '.json';
+                fileInput.onchange = (event) => {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            try {
+                                const restoredData = JSON.parse(e.target.result);
+                                const keysToRemove = [];
+                                for (let i = 0; i < localStorage.length; i++) {
+                                    const key = localStorage.key(i);
+                                    if (key.startsWith('samity-')) { // Updated to include expense data
+                                        keysToRemove.push(key);
+                                    }
+                                }
+                                keysToRemove.forEach(key => localStorage.removeItem(key));
 
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.accept = '.json';
-        fileInput.onchange = (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const restoredData = JSON.parse(e.target.result);
-                        
-                        // Clear existing data
-                        const keysToRemove = [];
-                        for (let i = 0; i < localStorage.length; i++) {
-                            const key = localStorage.key(i);
-                            if (key.startsWith('samity-data-')) {
-                                keysToRemove.push(key);
-                            }
-                        }
-                        keysToRemove.forEach(key => localStorage.removeItem(key));
+                                for (const key in restoredData) {
+                                    if (key.startsWith('samity-')) { // Updated
+                                        localStorage.setItem(key, restoredData[key]);
+                                    }
+                                }
 
-                        // Restore new data
-                        for (const key in restoredData) {
-                            if (key.startsWith('samity-data-')) {
-                                localStorage.setItem(key, restoredData[key]);
+                                // Find the most recent date from restored data
+                                const restoredKeys = Object.keys(restoredData).filter(k => k.startsWith('samity-data-'));
+                                if (restoredKeys.length > 0) {
+                                    restoredKeys.sort(); // Sorts strings: "samity-data-2023-01-01" < "samity-data-2023-01-02"
+                                    const latestKey = restoredKeys[restoredKeys.length - 1];
+                                    const latestDate = latestKey.replace('samity-data-', '');
+                                    
+                                    localStorage.setItem('lastSavedDate', latestDate);
+                                    localStorage.setItem('selectedDate', latestDate);
+                                }
+
+                                Swal.fire('Restored!', 'Data restored. Reloading...', 'success')
+                                    .then(() => location.reload());
+                            } catch (error) {
+                                Swal.fire('Error', 'Invalid backup file.', 'error');
                             }
-                        }
-                        alert('Data restored successfully! The page will now reload.');
-                        location.reload();
-                    } catch (error) {
-                        alert('Error reading or parsing backup file. Please ensure it is a valid backup file.');
+                        };
+                        reader.readAsText(file);
                     }
                 };
-                reader.readAsText(file);
+                fileInput.click();
             }
-        };
-        fileInput.click();
+        });
     }
 
     function clearAllData() {
-        if (!confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
-            return;
-        }
-        if (!confirm('FINAL WARNING: This will delete everything. Are you absolutely sure?')) {
-            return;
-        }
-
-        const keysToRemove = [];
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key.startsWith('samity-data-')) {
-                keysToRemove.push(key);
+        Swal.fire({
+            title: 'Clear ALL Data?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Yes, delete everything!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key.startsWith('samity-')) { // Updated
+                        keysToRemove.push(key);
+                    }
+                }
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+                
+                Swal.fire('Cleared!', 'All data has been deleted.', 'success')
+                    .then(() => location.reload());
             }
-        }
-        keysToRemove.forEach(key => localStorage.removeItem(key));
-        
-        alert('All data has been cleared. The page will now reload.');
-        location.reload();
+        });
     }
+    
+    // Start App
+    init();
+    initHeader3D();
 });
+
+// --- Header 3D Background ---
+function initHeader3D() {
+    const canvas = document.getElementById('header-3d-canvas');
+    if (!canvas || typeof THREE === 'undefined') return;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+    
+    renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+
+    // Particles (Icosahedrons)
+    const geometry = new THREE.IcosahedronGeometry(1, 0);
+    const material = new THREE.MeshPhongMaterial({
+        color: 0xffffff,
+        flatShading: true,
+        transparent: true,
+        opacity: 0.8
+    });
+
+    const particles = [];
+    for (let i = 0; i < 30; i++) {
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.x = (Math.random() - 0.5) * 40;
+        mesh.position.y = (Math.random() - 0.5) * 20;
+        mesh.position.z = (Math.random() - 0.5) * 20;
+        mesh.rotation.x = Math.random() * Math.PI;
+        mesh.rotation.y = Math.random() * Math.PI;
+        
+        const scale = Math.random() * 0.5 + 0.2;
+        mesh.scale.set(scale, scale, scale);
+        
+        scene.add(mesh);
+        particles.push({
+            mesh: mesh,
+            speedX: (Math.random() - 0.5) * 0.02,
+            speedY: (Math.random() - 0.5) * 0.02,
+            rotX: (Math.random() - 0.5) * 0.02,
+            rotY: (Math.random() - 0.5) * 0.02
+        });
+    }
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
+    
+    const light1 = new THREE.PointLight(0xff00cc, 1, 50);
+    light1.position.set(10, 10, 10);
+    scene.add(light1);
+    
+    const light2 = new THREE.PointLight(0x00f2fe, 1, 50);
+    light2.position.set(-10, -10, 10);
+    scene.add(light2);
+
+    camera.position.z = 15;
+
+    function animate() {
+        requestAnimationFrame(animate);
+        
+        particles.forEach(p => {
+            p.mesh.position.x += p.speedX;
+            p.mesh.position.y += p.speedY;
+            p.mesh.rotation.x += p.rotX;
+            p.mesh.rotation.y += p.rotY;
+            
+            // Loop bounds
+            if (p.mesh.position.x > 20) p.mesh.position.x = -20;
+            if (p.mesh.position.x < -20) p.mesh.position.x = 20;
+            if (p.mesh.position.y > 10) p.mesh.position.y = -10;
+            if (p.mesh.position.y < -10) p.mesh.position.y = 10;
+        });
+
+        renderer.render(scene, camera);
+    }
+    
+    animate();
+    
+    // Handle Resize
+    window.addEventListener('resize', () => {
+        camera.aspect = canvas.clientWidth / canvas.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+    });
+}
